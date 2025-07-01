@@ -1,0 +1,1669 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controllo Qualità ATAC</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Library SheetJS per l'esportazione in Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand-color-primary: #1d4ed8; /* blue-700 */
+            --brand-color-secondary: #16a34a; /* green-600 */
+            --brand-color-danger: #dc2626; /* red-600 */
+            --background-color: #f0f2f5;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--background-color);
+        }
+
+        /* Stile dei pulsanti principali e di modulo */
+        .main-button {
+            transition: all 0.2s ease-in-out;
+            width: 100%;
+        }
+        @media (min-width: 640px) {
+            .main-button { width: auto; }
+        }
+        .main-button:hover {
+            transform: scale(1.02);
+            filter: brightness(1.1);
+        }
+        .module-btn {
+            transition: all 0.2s ease-in-out;
+            border: 2px solid transparent;
+        }
+        .module-btn:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+            border-color: var(--brand-color-primary);
+        }
+        
+        /* Stile custom per i radio button ottimizzato per il tocco */
+        .custom-radio input[type="radio"] {
+            display: none;
+        }
+        .custom-radio label {
+            cursor: pointer;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem; /* Angoli arrotondati */
+            border: 1px solid #d1d5db;
+            transition: all 0.2s ease-in-out;
+            font-weight: 500;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-grow: 1; /* Fa in modo che i label riempiano lo spazio */
+        }
+        .custom-radio-group {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .custom-radio input[type="radio"]:checked+label {
+            background-color: var(--brand-color-primary);
+            color: white;
+            border-color: var(--brand-color-primary);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* Variante Si/No */
+        .custom-radio.yes-no input[type="radio"][value="SI"]:checked+label,
+        .custom-radio.ok-nok input[type="radio"][value="Ok"]:checked+label,
+        .custom-radio.on-off input[type="radio"][value="ON"]:checked+label {
+            background-color: var(--brand-color-secondary);
+            border-color: var(--brand-color-secondary);
+        }
+        .custom-radio.yes-no input[type="radio"][value="NO"]:checked+label,
+        .custom-radio.ok-nok input[type="radio"][value="Non Ok"]:checked+label,
+        .custom-radio.on-off input[type="radio"][value="OFF"]:checked+label {
+            background-color: var(--brand-color-danger);
+            border-color: var(--brand-color-danger);
+        }
+
+        /* Stile custom per i checkbox */
+        .custom-checkbox input[type="checkbox"] {
+            display: none;
+        }
+        .custom-checkbox label {
+            cursor: pointer;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid #d1d5db;
+            transition: all 0.2s ease-in-out;
+            font-weight: 500;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-grow: 1;
+            /* Default background for unchecked (functional) */
+            background-color: #d1d5db; /* Grey for "funzionante" */
+            color: #4b5563;
+            border-color: #9ca3af;
+        }
+        .custom-checkbox input[type="checkbox"]:checked + label {
+            background-color: var(--brand-color-danger); /* Red for "non funzionante" */
+            color: white;
+            border-color: var(--brand-color-danger);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        /* Tabella responsiva che diventa card su mobile */
+        @media (max-width: 767px) {
+            #results-table thead, #module9-container thead {
+                display: none; /* Nasconde l'header della tabella */
+            }
+            #results-table, #results-table tbody, #results-table tr,
+            #module9-container table, #module9-container tbody, #module9-container tr {
+                display: block;
+                width: 100%;
+            }
+            #results-table tr, #module9-container tr {
+                background-color: white;
+                border-radius: 0.75rem;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+                margin-bottom: 1rem;
+                padding: 1rem;
+                border: 1px solid #e5e7eb;
+            }
+            #results-table td, #module9-container td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0.5rem 0;
+                border: none;
+                width: 100%;
+                text-align: right;
+            }
+            #results-table td::before, #module9-container td::before {
+                content: attr(data-label);
+                font-weight: 600;
+                text-align: left;
+                margin-right: 1rem;
+                color: #374151;
+            }
+            #results-table td:last-child {
+                justify-content: center; /* Centra il pulsante Rimuovi */
+                padding-top: 1rem;
+            }
+            .remove-btn { /* Stile più evidente per il pulsante Rimuovi */
+                width: 100%;
+                padding: 0.75rem;
+                background-color: #fee2e2;
+                color: var(--brand-color-danger);
+                border-radius: 0.5rem;
+                font-weight: 600;
+                text-align: center;
+            }
+            .remove-btn:hover {
+                background-color: #fecaca;
+            }
+        }
+        
+        /* Stili per le modali custom */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+        .modal-box {
+            background-color: white;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .conditional-wrapper.hidden {
+            display: none;
+        }
+
+        /* Accordion styles */
+        .accordion-header {
+            cursor: pointer;
+            padding: 1rem;
+            background-color: #e5e7eb;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .accordion-header:hover {
+            background-color: #d1d5db;
+        }
+        .accordion-content {
+            padding: 1rem;
+            border: 1px solid #e5e7eb;
+            border-top: none;
+            border-radius: 0 0 0.5rem 0.5rem;
+            display: none;
+        }
+         .accordion-content.open {
+            display: grid;
+            gap: 1.5rem;
+         }
+        .accordion-icon::after {
+            content: '▼';
+            transition: transform 0.2s;
+        }
+        .accordion-header.active .accordion-icon::after {
+            transform: rotate(180deg);
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 1rem;
+            align-items: center;
+        }
+         .form-row > label {
+            font-weight: 500;
+        }
+        .rating-group {
+            display: flex;
+            gap: 0.25rem;
+        }
+        .rating-group input[type="radio"] {
+            display: none;
+        }
+        .rating-group label {
+            width: 40px;
+            height: 40px;
+        }
+
+    </style>
+</head>
+
+<body class="bg-gray-100 text-gray-800">
+
+    <div id="app-container" class="container mx-auto p-4 max-w-4xl">
+        
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/1/1d/Logo_ATAC.svg" 
+                 alt="Logo ATAC" 
+                 class="mx-auto mb-4 h-12 w-auto"
+                 onerror="this.onerror=null; this.src='https://placehold.co/120x48/E5E7EB/1F2937?text=ATAC';"
+            >
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800">Controllo Qualità</h1>
+            <p id="module-subtitle" class="text-lg text-gray-600 mt-1 font-medium"></p>
+        </header>
+
+        <!-- Sezione Selezione Modulo -->
+        <div id="module-selection" class="bg-white p-6 rounded-xl shadow-lg">
+            <h2 class="text-2xl font-semibold text-center mb-6">Seleziona un Modulo</h2>
+            <div id="module-buttons-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                <!-- I pulsanti dei moduli vengono generati qui via JS -->
+            </div>
+        </div>
+
+        <main id="main-interface" class="hidden">
+            
+            <div id="main-form-container" class="bg-white p-6 rounded-xl shadow-lg mb-8">
+                <form id="quality-check-form" class="space-y-6">
+                    <!-- I campi del form vengono generati qui via JS -->
+                </form>
+            </div>
+            
+            <!-- Contenitore info sessione -->
+            <div id="session-info-m1" class="hidden bg-blue-50 border-l-4 border-blue-500 text-blue-800 p-4 rounded-r-lg mb-8 shadow">
+                <p><strong>Nome Rilevatore:</strong> <span id="session-rilevatore-m1">Nessuno</span></p>
+                <p><strong>Data Controllo:</strong> <span id="session-date-m1"></span></p>
+                <p><strong>Stabilimento Selezionato:</strong> <span id="session-establishment-m1">Nessuno</span></p>
+            </div>
+            <div id="session-info-m2" class="hidden bg-indigo-50 border-l-4 border-indigo-500 text-indigo-800 p-4 rounded-r-lg mb-8 shadow">
+                <p><strong>Nome Rilevatore:</strong> <span id="session-rilevatore-m2">Nessuno</span></p>
+                <p><strong>Data:</strong> <span id="session-date-m2"></span></p>
+                <p><strong>Ora:</strong> <span id="session-time-m2"></span></p>
+                <p><strong>Rimessa/Capolinea:</strong> <span id="session-location-m2">Nessuno</span></p>
+            </div>
+            <div id="session-info-m3" class="hidden bg-teal-50 border-l-4 border-teal-500 text-teal-800 p-4 rounded-r-lg mb-8 shadow">
+                <p><strong>Nome Rilevatore:</strong> <span id="session-rilevatore-m3">Nessuno</span></p>
+                <p><strong>Data Controllo:</strong> <span id="session-date-m3"></span></p>
+                <p><strong>Stabilimento Selezionato:</strong> <span id="session-establishment-m3">Nessuno</span></p>
+            </div>
+             <div id="session-info-m4" class="hidden bg-purple-50 border-l-4 border-purple-500 text-purple-800 p-4 rounded-r-lg mb-8 shadow">
+                <p><strong>Nome Rilevatore:</strong> <span id="session-rilevatore-m4">Nessuno</span></p>
+                <p><strong>Data Controllo:</strong> <span id="session-date-m4"></span></p>
+                <p><strong>Numero Linea:</strong> <span id="session-linea-m4">Nessuna</span></p>
+            </div>
+            <div id="session-info-m5" class="hidden bg-pink-50 border-l-4 border-pink-500 text-pink-800 p-4 rounded-r-lg mb-8 shadow">
+                <p><strong>Nome Rilevatore:</strong> <span id="session-rilevatore-m5">Nessuno</span></p>
+                <p><strong>Data Controllo:</strong> <span id="session-date-m5"></span></p>
+                <p><strong>Linea Metro/F.R.:</strong> <span id="session-linea-m5">Nessuna</span></p>
+            </div>
+             <div id="session-info-m6" class="hidden bg-orange-50 border-l-4 border-orange-500 text-orange-800 p-4 rounded-r-lg mb-8 shadow">
+                <p><strong>Nome Rilevatore:</strong> <span id="session-rilevatore-m6">Nessuno</span></p>
+                <p><strong>Data Controllo:</strong> <span id="session-date-m6"></span></p>
+                <p><strong>Stabilimento:</strong> <span id="session-stabilimento-m6">Nessuno</span></p>
+                <p><strong>A.D.E. in Servizio:</strong> <span id="session-ade-m6">N/D</span></p>
+                <p><strong>Vetture in Servizio:</strong> <span id="session-vetture-servizio-m6">N/D</span></p>
+                <p><strong>C.T. Trazione:</strong> <span id="session-ct-trazione-m6">N/D</span></p>
+                <p><strong>Parco Vetture Stabilimento:</strong> <span id="session-parco-vetture-m6">N/D</span></p>
+            </div>
+            <div id="session-info-m7" class="hidden bg-cyan-50 border-l-4 border-cyan-500 text-cyan-800 p-4 rounded-r-lg mb-8 shadow">
+                <p><strong>Nome Rilevatore:</strong> <span id="session-rilevatore-m7">Nessuno</span></p>
+                <p><strong>Data Controllo:</strong> <span id="session-date-m7"></span></p>
+                <p><strong>Linea:</strong> <span id="session-linea-m7">Nessuna</span></p>
+            </div>
+            <div id="session-info-m8" class="hidden bg-lime-50 border-l-4 border-lime-500 text-lime-800 p-4 rounded-r-lg mb-8 shadow">
+                <p><strong>Nome Rilevatore:</strong> <span id="session-rilevatore-m8">Nessuno</span></p>
+                <p><strong>Data Controllo:</strong> <span id="session-date-m8"></span></p>
+                <p><strong>Orario Verifica:</strong> <span id="session-orario-m8">N/D</span></p>
+                <p><strong>Capolinea:</strong> <span id="session-capolinea-m8">Nessuno</span></p>
+                <p><strong>Addetto Capolinea:</strong> <span id="session-addetto-m8">Nessuno</span></p>
+                <p><strong>Linee:</strong> <span id="session-linee-m8">Nessuna</span></p>
+                <p><strong>Data/Ora Pulizia:</strong> <span id="session-pulizia-m8">N/D</span></p>
+            </div>
+             <div id="session-info-m9" class="hidden bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800 p-4 rounded-r-lg mb-8 shadow">
+                <p><strong>Nome Rilevatore (Dotazioni):</strong> <span id="session-rilevatore-m9">Nessuno</span></p>
+                <p><strong>Data Controllo:</strong> <span id="session-date-m9"></span></p>
+                <p><strong>Metro:</strong> <span id="session-metro-m9">Nessuna</span></p>
+                <p><strong>Stazione:</strong> <span id="session-stazione-m9">Nessuna</span></p>
+            </div>
+
+            <div id="module7-legend" class="hidden"></div>
+            <div id="module9-container"></div>
+
+
+            <!-- Pulsanti -->
+            <div id="action-buttons" class="mt-8 mb-8 flex flex-col sm:flex-row sm:justify-center items-center gap-4">
+                <button id="export-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg main-button disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
+                    Salva e Esporta
+                </button>
+                <button id="back-to-modules" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg shadow-lg main-button">
+                    Cambia Modulo
+                </button>
+            </div>
+
+            <!-- Tabella Risultati -->
+            <div id="results-container" class="bg-transparent rounded-xl">
+                <h2 class="text-2xl font-semibold mb-4 text-center sm:text-left">Controlli Effettuati</h2>
+                <div class="overflow-x-auto bg-white rounded-lg shadow">
+                    <table id="results-table" class="min-w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <!-- Header generato da JS -->
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            <!-- Righe generate da JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <p id="no-data-message" class="text-center text-gray-500 py-8 bg-white rounded-lg shadow-inner">Nessun controllo ancora inserito.</p>
+            </div>
+        </main>
+        
+        <footer class="text-center mt-12 text-sm text-gray-500">
+            <p>&copy; 2024 - Sistema di Controllo Qualità</p>
+        </footer>
+    </div>
+    
+    <div id="confirm-modal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <h3 id="confirm-title" class="text-lg font-bold mb-2">Sei sicuro?</h3>
+            <p id="confirm-message" class="text-gray-600 mb-6">I dati non salvati andranno persi.</p>
+            <div class="flex justify-center gap-4">
+                <button id="confirm-cancel" class="main-button bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg">Annulla</button>
+                <button id="confirm-ok" class="main-button bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg">Conferma</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="alert-modal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <h3 id="alert-title" class="text-lg font-bold mb-2">Attenzione</h3>
+            <p id="alert-message" class="text-gray-600 mb-6">Non ci sono dati da esportare.</p>
+            <button id="alert-ok" class="main-button bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg">OK</button>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Riferimenti agli elementi del DOM
+            const moduleSelectionSection = document.getElementById('module-selection');
+            const mainInterface = document.getElementById('main-interface');
+            const qualityCheckForm = document.getElementById('quality-check-form');
+            const resultsTableHead = document.querySelector('#results-table thead tr');
+            const resultsTableBody = document.querySelector('#results-table tbody');
+            const exportButton = document.getElementById('export-btn');
+            const backToModulesButton = document.getElementById('back-to-modules');
+            const moduleSubtitle = document.getElementById('module-subtitle');
+            const noDataMessage = document.getElementById('no-data-message');
+            const moduleButtonsContainer = document.getElementById('module-buttons-container');
+            const mainFormContainer = document.getElementById('main-form-container');
+            const actionButtons = document.getElementById('action-buttons');
+            const resultsContainer = document.getElementById('results-container');
+
+
+            // Session Info Divs
+            const sessionInfoM1 = document.getElementById('session-info-m1');
+            const sessionRilevatoreM1 = document.getElementById('session-rilevatore-m1');
+            const sessionDateM1 = document.getElementById('session-date-m1');
+            const sessionEstablishmentM1 = document.getElementById('session-establishment-m1');
+            
+            const sessionInfoM2 = document.getElementById('session-info-m2');
+            const sessionRilevatoreM2 = document.getElementById('session-rilevatore-m2');
+            const sessionDateM2 = document.getElementById('session-date-m2');
+            const sessionTimeM2 = document.getElementById('session-time-m2');
+            const sessionLocationM2 = document.getElementById('session-location-m2');
+
+            const sessionInfoM3 = document.getElementById('session-info-m3');
+            const sessionRilevatoreM3 = document.getElementById('session-rilevatore-m3');
+            const sessionDateM3 = document.getElementById('session-date-m3');
+            const sessionEstablishmentM3 = document.getElementById('session-establishment-m3');
+
+            const sessionInfoM4 = document.getElementById('session-info-m4');
+            const sessionRilevatoreM4 = document.getElementById('session-rilevatore-m4');
+            const sessionDateM4 = document.getElementById('session-date-m4');
+            const sessionLineaM4 = document.getElementById('session-linea-m4');
+            
+            const sessionInfoM5 = document.getElementById('session-info-m5');
+            const sessionRilevatoreM5 = document.getElementById('session-rilevatore-m5');
+            const sessionDateM5 = document.getElementById('session-date-m5');
+            const sessionLineaM5 = document.getElementById('session-linea-m5');
+
+            const sessionInfoM6 = document.getElementById('session-info-m6');
+            const sessionRilevatoreM6 = document.getElementById('session-rilevatore-m6');
+            const sessionDateM6 = document.getElementById('session-date-m6');
+            const sessionStabilimentoM6 = document.getElementById('session-stabilimento-m6');
+            const sessionAdeM6 = document.getElementById('session-ade-m6');
+            const sessionVettureServizioM6 = document.getElementById('session-vetture-servizio-m6');
+            const sessionCtTrazioneM6 = document.getElementById('session-ct-trazione-m6');
+            const sessionParcoVettureM6 = document.getElementById('session-parco-vetture-m6');
+
+            const sessionInfoM7 = document.getElementById('session-info-m7');
+            const sessionRilevatoreM7 = document.getElementById('session-rilevatore-m7');
+            const sessionDateM7 = document.getElementById('session-date-m7');
+            const sessionLineaM7 = document.getElementById('session-linea-m7');
+            
+            const sessionInfoM8 = document.getElementById('session-info-m8');
+            const sessionRilevatoreM8 = document.getElementById('session-rilevatore-m8');
+            const sessionDateM8 = document.getElementById('session-date-m8');
+            const sessionOrarioM8 = document.getElementById('session-orario-m8');
+            const sessionCapolineaM8 = document.getElementById('session-capolinea-m8');
+            const sessionAddettoM8 = document.getElementById('session-addetto-m8');
+            const sessionLineeM8 = document.getElementById('session-linee-m8');
+            const sessionPuliziaM8 = document.getElementById('session-pulizia-m8');
+            
+            const sessionInfoM9 = document.getElementById('session-info-m9');
+            const sessionRilevatoreM9 = document.getElementById('session-rilevatore-m9');
+            const sessionDateM9 = document.getElementById('session-date-m9');
+            const sessionMetroM9 = document.getElementById('session-metro-m9');
+            const sessionStazioneM9 = document.getElementById('session-stazione-m9');
+
+            const module7LegendContainer = document.getElementById('module7-legend');
+            const module9Container = document.getElementById('module9-container');
+            
+            const confirmModal = document.getElementById('confirm-modal');
+            const alertModal = document.getElementById('alert-modal');
+
+            let qualityChecks = [];
+            let selectedModule = '';
+            const TOTAL_MODULES = 9;
+            let confirmCallback = null;
+            let sessionTimeUpdater;
+            let orarioVerificaM8 = null; 
+
+            // --- Definizione dei Moduli ---
+            const codeOptions = ["01 – fuori servizio", "02 – manca", "05 – non legge card", "06 – disconnessa", "07 – display illeggibile", "08 – spenta", "09 – supporto rotto", "10 – non stampa scadenza", "11 – non accetta titoli", "12 – altro", "13 – orario non in linea", "R – OBT accesa dall’autista"];
+            const stabilimentiOptions = ["Porta Maggiore", "Officine centrali", "Acilia", "Grottarossa", "Magliana", "Monte Sacro", "Portonaccio", "Tor Pagnotta", "Tor Sapienza", "Tor Vergata", "Trastevere"];
+            
+            const impianti06A = ["77103 - P.LE STAZIONE DEL LIDO (RL)", "83139 - REGINA PACIS/CELLI", "83488 - PIETRO ROSA", "83489 - PINETA DI OSTIA/VITTORIA", "77113 - GRIMALDI CASTA/SAGONA", "77114 - TARTANE", "77115 - VEGA/STAZ.NE STELLA POLARE (RL)", "82544 - VEGA/RANDE", "77117 - BUCINTORO", "77118 - LM DUILIO/BUSSOLA", "77120 - LM DUILIO/PESCATORI", "78701 - V.LE STAZIONE CASTEL FUSANO", "77126 - LM LUTAZIO CATULO/ISABELLA DI CASTIGLIA", "77127 - COLOMBO/L. CATULO", "77128 - COLOMBO/VILLA PLINIO", "77078 - LIDO CASTEL PORZIANO/COLOMBO", "77079 - LIDO CASTEL PORZIANO/CASTEL PORZIANO", "80132 - CASTEL PORZIANO/GARGIULO", "80133 - CASTEL PORZIANO/CALCATERRA", "77133 - CASTEL PORZIANO/CANALE DELLA LINGUA", "77134 - CASTEL PORZIANO/VECCHI", "77135 - CASTEL PORZIANO/STRADELLA", "77136 - CASTEL PORZIANO/SALORNO", "77137 - CASTEL PORZIANO/PINZOLO", "77138 - CASTEL PORZIANO/MARIANI", "77139 - CASTEL PORZIANO/TORCEGNO", "77140 - CASTEL PORZIANO/CANAZEI", "77141 - CASTEL PORZIANO/DOBBIACO", "79651 - WOLF FERRARI/LOTTI", "79383 - LOTTI A./SESINI", "79384 - LOTTI A./PASTURA", "79385 - LOTTI A./CORONARO", "79386 - LOTTI A./BAZZINI", "79387 - FRANCHETTI/CENTRO SPORTIVO", "81302 - FRANCHETTI/WOLF FERRARI", "79388 - PINDARO/FONTE DEGLI ACILII", "79389 - MACCHIA SAPONARA", "77230 - ARCHELAO DI MILETO/MACCHIA SAPONARA", "77231 - ARCHELAO DI MILETO/MENIPPO", "76971 - GORGIA DI LEONTINI/DIOFANTO", "76972 - GORGIA DI LEONTINI/ANASSARCO", "779533 - GORGIA DI LEONTINI/APELLE", "77233 - CASAL PALOCCO/CENTRO SPORTIVO", "76976 - CASAL PALOCCO/TERRAZZE", "77234 - CASAL PALOCCO/TALETE", "6978 - CASAL PALOCCO/COLOMBO", "79393 - WOLF FERRARI/COLOMBO", "83142 - MALIPIERO/RAVEL", "83143 - MALIPIERO/ROMANI", "83144 - ROMANI/PARISOTTI", "83145 - ROMANI/ORFF", "83487 - CILEA/ROMANI", "83146 - CILEA/ORFF", "77659 - WOLF FERRARI/BAZZINI"];
+            const impianti06R = ["77659 - WOLF FERRARI/BAZZINI", "81301 - FRANCHETTI/WOLF FERRARI", "79394 - FRANCHETTI/CENTRO SPORTIVO", "79395 - LOTTI A./BAZZINI", "79396 - LOTTI A./CORONARO", "79397 - LOTTI A./PASTURA", "79398 - LOTTI A./SESINI", "79650 - WOLF FERRARI/LOTTI", "77065 - CASTEL PORZIANO/DOBBIACO", "77067 - CASTEL PORZIANO/CANAZEI", "77068 - CASTEL PORZIANO/TORCEGNO", "77069 - CASTEL PORZIANO/MARIANI", "77070 - CASTEL PORZIANO/PINZOLO", "77071 - CASTEL PORZIANO/SALORNO", "77072 - CASTEL PORZIANO/STRADELLA", "77073 - CASTEL PORZIANO/VECCHI", "77074 - CASTEL PORZIANO/CANALE DELLA LINGUA", "80134 - CASTEL PORZIANO/CALCATERRA", "80135 - CASTEL PORZIANO/GARGIULO", "77130 - LIDO CASTEL PORZIANO/CASTEL PORZIANO", "77081 - COLOMBO/VILLA PLINIO", "76940 - LM LUTAZIO CATULO/ISABELLA DI CASTIGLIA", "77082 - LM LUTAZIO CATULO/ORI", "77179 - LM LUTAZIO CATULO/VIVALDI", "77084 - LM LUTAZIO CATULO/AQUILONE", "78700 - V.LE STAZIONE CASTEL FUSANO", "77085 - LM DUILIO/PESCATORI", "77087 - QUINQUEREMI/BORGO PESCATORI", "82546 - VEGA/RANDE", "77091 - TOLDA/STAZ.NE STELLA POLARE (RL)", "77093 - ALGAIOLA/STELLA POLARE", "77095 - GRIMALDI CASTA/SAGONA", "83147 - VITTORIA/REGINA MARIA PIA", "83148 - REGINA MARIA PIA/ROSA", "79310 - VANNUTELLI/REGINA PACIS", "77103 - P.LE STAZIONE DEL LIDO (RL)"];
+            const dotazioniStazioniMetroA = {'Anagnina':{'A1':3,'A2':1,'A3':3,'A4':11,'A5':1,'A6':3,'A7':0,'A8':0,'A9':0,'A10':2,'A11':206,'A12':10,'A13':10,'A14':0,'A15':2,'A16':5,'A17':5,'A18':2,'A19':23,'A20':2,'A21':4,'A22':104,'A23':105,'A24':0,'A25':0,'A26':0,'A27':0,'A28':0,'Bp1':1,'Bp2':2,'Bp3':1,'Bp4':0,'Bp5':87,'Bp6':1,'Bp7':3,'Bp8':3,'Bp9':3,'Bp10':9,'Bp11':2,'Bd1':1,'Bd2':2,'Bd3':1,'Bd4':0,'Bd5':87,'Bd6':1,'Bd7':3,'Bd8':3,'Bd9':3,'Bd10':13,'Bd11':2},'Cinecittà':{'A1':4,'A2':1,'A3':5,'A4':4,'A5':1,'A6':3,'A7':3,'A8':0,'A9':0,'A10':1,'A11':263,'A12':4,'A13':5,'A14':0,'A15':2,'A16':4,'A17':12,'A18':2,'A19':47,'A20':2,'A21':4,'A22':106,'A23':107,'A24':0,'A25':0,'A26':0,'A27':0,'A28':0,'Bp1':1,'Bp2':2,'Bp3':1,'Bp4':0,'Bp5':97,'Bp6':1,'Bp7':3,'Bp8':3,'Bp9':3,'Bp10':16,'Bp11':2,'Bd1':1,'Bd2':2,'Bd3':1,'Bd4':0,'Bd5':97,'Bd6':1,'Bd7':3,'Bd8':3,'Bd9':3,'Bd10':16,'Bd11':2},'Subaugusta':{'A1':4,'A2':1,'A3':5,'A4':4,'A5':1,'A6':3,'A7':3,'A8':0,'A9':0,'A10':1,'A11':302,'A12':6,'A13':1,'A14':0,'A15':2,'A16':4,'A17':12,'A18':2,'A19':59,'A20':2,'A21':97,'A22':101,'A23':103,'A24':0,'A25':0,'A26':0,'A27':0,'A28':0,'Bp1':1,'Bp2':2,'Bp3':1,'Bp4':0,'Bp5':97,'Bp6':1,'Bp7':3,'Bp8':3,'Bp9':3,'Bp10':17,'Bp11':2,'Bd1':1,'Bd2':2,'Bd3':1,'Bd4':0,'Bd5':97,'Bd6':1,'Bd7':3,'Bd8':3,'Bd9':3,'Bd10':17,'Bd11':2},'Giulio Agricola':{'A1':4,'A2':0,'A3':9,'A4':5,'A5':1,'A6':3,'A7':0,'A8':0,'A9':0,'A10':3,'A11':263,'A12':7,'A13':10,'A14':0,'A15':1,'A16':3,'A17':4,'A18':4,'A19':20,'A20':2,'A21':5,'A22':108,'A23':109,'A24':485,'A25':486,'A26':0,'A27':0,'A28':0,'Bp1':2,'Bp2':0,'Bp3':1,'Bp4':0,'Bp5':87,'Bp6':1,'Bp7':4,'Bp8':2,'Bp9':3,'Bp10':10,'Bp11':2,'Bd1':2,'Bd2':0,'Bd3':1,'Bd4':0,'Bd5':87,'Bd6':1,'Bp7':4,'Bd8':2,'Bd9':3,'Bd10':10,'Bd11':2},'Lucio Sestio':{'A1':4,'A2':0,'A3':5,'A4':4,'A5':1,'A6':3,'A7':3,'A8':0,'A9':0,'A10':3,'A11':226,'A12':7,'A13':10,'A14':0,'A15':1,'A16':5,'A17':5,'A18':2,'A19':23,'A20':2,'A21':7,'A22':110,'A23':111,'A24':483,'A25':484,'A26':0,'A27':1,'A28':1},'Numidio Quadrato':{'A1':2,'A2':0,'A3':5,'A4':3,'A5':1,'A6':3,'A7':3,'A8':0,'A9':0,'A10':1,'A11':97,'A12':6,'A13':10,'A14':0,'A15':1,'A16':2,'A17':2,'A18':4,'A19':16,'A20':2,'A21':8,'A22':491,'A23':31,'A24':0,'Bp1':2,'Bp2':0,'Bp3':1,'Bp4':0,'Bp5':130,'Bp6':0,'Bp7':4,'Bp8':2,'Bp9':1,'Bp10':8,'Bp11':2,'Bd1':2,'Bd2':0,'Bd3':1,'Bd4':0,'Bd5':130,'Bd6':0,'Bd7':4,'Bd8':2,'Bd9':1,'Bd10':8,'Bd11':2},'Porta Furba – Quadraro':{'A1':3,'A2':0,'A3':4,'A4':2,'A5':1,'A6':3,'A7':3,'A8':0,'A9':0,'A10':3,'A11':206,'A12':4,'A13':6,'A14':0,'A15':1,'A16':2,'A17':3,'A18':2,'A19':21,'A20':2,'A21':113,'A22':264,'A23':9,'A24':0,'Bp1':2,'Bp2':2,'Bp3':1,'Bp4':0,'Bp5':90,'Bp6':1,'Bp7':3,'Bp8':3,'Bp9':3,'Bp10':14,'Bp11':2,'Bd1':2,'Bd2':0,'Bd3':1,'Bd4':0,'Bd5':90,'Bd6':1,'Bp7':3,'Bp8':3,'Bd9':3,'Bd10':14,'Bd11':2},'Arco di Travertino':{'A1':2,'A2':0,'A3':3,'A4':1,'A5':1,'A6':3,'A7':0,'A8':0,'A9':0,'A10':2,'A11':240,'A12':7,'A13':10,'A14':0,'A15':2,'A16':3,'A17':5,'A18':2,'A19':22,'A20':2,'A21':0,'A22':0,'A23':0,'A24':0,'Bp1':2,'Bp2':0,'Bp3':1,'Bp4':0,'Bp5':87,'Bp6':0,'Bp7':3,'Bp8':3,'Bp9':2,'Bp10':11,'Bp11':2,'Bd1':2,'Bd2':0,'Bd3':1,'Bd4':0,'Bd5':87,'Bd6':1,'Bp7':3,'Bd8':3,'Bd9':2,'Bd10':13,'Bd11':2},'Colli Albani':{'A1':5,'A2':0,'A3':5,'A4':1,'A5':1,'A6':3,'A7':0,'A8':0,'A9':0,'A10':3,'A11':212,'A12':6,'A13':8,'A14':0,'A15':1,'A16':3,'A17':4,'A18':3,'A19':39,'A20':2,'A21':0,'A22':0,'A23':0,'A24':10,'Bp1':2,'Bp2':0,'Bp3':1,'Bp4':0,'Bp5':85,'Bp6':1,'Bp7':3,'Bp8':3,'Bp9':2,'Bp10':13,'Bp11':2,'Bd1':2,'Bd2':0,'Bd3':1,'Bd4':0,'Bd5':87,'Bd6':1,'Bp7':3,'Bd8':3,'Bd9':2,'Bd10':13,'Bd11':2},'Furio Camillo':{'A1':6,'A2':0,'A3':6,'A4':1,'A5':1,'A6':3,'A7':3,'A8':4,'A9':0,'A10':0,'A11':502,'A12':5,'A13':5,'A14':0,'A15':1,'A16':3,'A17':11,'A18':2,'A19':46,'A20':2,'A21':0,'A22':0,'A23':0,'A24':11,'Bp1':2,'Bp2':0,'Bp3':1,'Bp4':0,'Bp5':142,'Bp6':1,'Bp7':3,'Bp8':3,'Bp9':2,'Bp10':15,'Bp11':2,'Bd1':2,'Bd2':0,'Bd3':1,'Bd4':0,'Bd5':142,'Bd6':1,'Bd7':3,'Bd8':3,'Bd9':2,'Bd10':15,'Bd11':2},'Ponte Lungo':{'A1':6,'A2':0,'A3':9,'A4':1,'A5':1,'A6':3,'A7':3,'A8':4,'A9':0,'A10':1,'A11':550,'A12':5,'A13':5,'A14':0,'A15':1,'A16':3,'A17':10,'A18':1,'A19':51,'A20':2,'A21':454,'A22':485,'A23':486,'A24':475,'A25':464,'A26':562,'A27':0,'A28':0,'Bp1':2,'Bp2':0,'Bp3':1,'Bp4':0,'Bp5':135,'Bp6':1,'Bp7':5,'Bp8':3,'Bp9':2,'Bp10':12,'Bp11':2,'Bd1':2,'Bd2':0,'Bd3':1,'Bd4':0,'Bd5':132,'Bd6':1,'Bp7':3,'Bd8':3,'Bd9':2,'Bd10':12,'Bd11':2},'Re di Roma':{'A1':6,'A2':0,'A3':11,'A4':1,'A5':1,'A6':3,'A7':3,'A8':4,'A9':0,'A10':0,'A11':618,'A12':5,'A13':5,'A14':0,'A15':1,'A16':3,'A17':8,'A18':10,'A19':0,'A20':2,'A21':478,'A22':483,'A23':484,'A24':477,'A25':2,'A26':0,'A27':1,'A28':1},'San Giovanni (intersezione con Metro C)':{'A1':4,'A2':0,'A3':6,'A4':1,'A5':1,'A6':3,'A7':0,'A8':8,'A9':0,'A10':0,'A11':245,'A12':6,'A13':8,'A14':0,'A15':1,'A16':3,'A17':5,'A18':5,'A19':0,'A20':2,'A21':449,'A22':106,'A23':110,'A24':0,'A25':0,'A26':0,'A27':0,'A28':0,'Bp1':2,'Bp2':0,'Bp3':1,'Bp4':0,'Bp5':87,'Bp6':1,'Bp7':3,'Bp8':3,'Bp9':2,'Bp10':14,'Bp11':2,'Bd1':2,'Bd2':0,'Bd3':1,'Bd4':0,'Bd5':88,'Bd6':1,'Bp7':3,'Bd8':3,'Bd9':2,'Bd10':14,'Bd11':2},'Manzoni':{'A1':4,'A2':0,'A3':6,'A4':1,'A5':1,'A6':3,'A7':3,'A8':4,'A9':0,'A10':1,'A11':406,'A12':5,'A13':5,'A14':2,'A15':2,'A16':3,'A17':5,'A18':4,'A19':0,'A20':2,'A21':472,'A22':470,'A23':471,'A24':0,'A25':0,'A26':0,'A27':1,'A28':0,'Bp1':2,'Bp2':0,'Bp3':1,'Bp4':0,'Bp5':188,'Bp6':3,'Bp7':3,'Bp8':3,'Bp9':2,'Bp10':11,'Bp11':1,'Bd1':2,'Bd2':0,'Bd3':1,'Bd4':0,'Bd5':188,'Bd6':3,'Bd7':3,'Bd8':3,'Bd9':2,'Bd10':14,'Bd11':1},'Vittorio Emanuele':{'A1':7,'A2':0,'A3':9,'A4':9,'A5':1,'A6':3,'A7':0,'A8':4,'A9':0,'A10':0,'A11':464,'A12':6,'A13':6,'A14':0,'A15':1,'A16':3,'A17':19,'A18':8,'A19':0,'A20':2,'A21':383,'A22':26,'A23':383,'A24':384,'A25':0,'A26':0,'A27':1,'A28':0,'Bp1':2,'Bp2':0,'Bp3':1,'Bp4':0,'Bp5':85,'Bp6':1,'Bp7':3,'Bp8':3,'Bp9':2,'Bp10':10,'Bp11':2,'Bd1':2,'Bd2':0,'Bd3':1,'Bd4':0,'Bd5':87,'Bd6':1,'Bp7':3,'Bd8':3,'Bd9':2,'Bd10':16,'Bd11':2},'Termini (intersezione con Metro B)':{'A1':3,'A2':0,'A3':6,'A4':5,'A5':5,'A6':17,'A7':3,'A8':20,'A9':2,'A10':0,'A11':2308,'A12':14,'A13':18,'A14':2,'A15':5,'A16':13,'A17':43,'A18':5,'A19':0,'A20':8,'A21':439,'A22':422,'A23':29,'A24':30,'A25':0,'A26':0,'A27':4,'A28':0,'Bp1':2,'Bp2':0,'Bp3':1,'Bp4':1,'Bp5':114,'Bp6':3,'Bp7':3,'Bp8':3,'Bp9':3,'Bp10':16,'Bp11':3,'Bd1':2,'Bd2':0,'Bd3':1,'Bd4':1,'Bd5':114,'Bd6':3,'Bd7':3,'Bd8':3,'Bd9':3,'Bd10':18,'Bd11':3},'Repubblica – Teatro dell’Opera':{'A1':5,'A2':0,'A3':5,'A4':5,'A5':1,'A6':3,'A7':0,'A8':6,'A9':0,'A10':0,'A11':564,'A12':9,'A13':10,'A14':0,'A15':1,'A16':4,'A17':6,'A18':3,'A19':47,'A20':2,'A21':436,'A22':411,'A23':34,'A24':1,'A25':0,'A26':0,'A27':0,'A28':0,'Bp1':2,'Bp2':0,'Bp3':1,'Bp4':0,'Bp5':83,'Bp6':1,'Bp7':3,'Bp8':3,'Bp9':3,'Bp10':10,'Bp11':2,'Bd1':2,'Bd2':0,'Bd3':1,'Bd4':0,'Bd5':91,'Bd6':1,'Bp7':3,'Bd8':3,'Bd9':3,'Bd10':14,'Bd11':2},'Barberini – Fontana di Trevi':{'A1':5,'A2':0,'A3':7,'A4':6,'A5':1,'A6':3,'A7':0,'A8':6,'A9':0,'A10':0,'A11':683,'A12':8,'A13':10,'A14':0,'A15':1,'A16':3,'A17':4,'A18':4,'A19':11,'A20':2,'A21':432,'A22':462,'A23':463,'A24':0,'A25':0,'A26':0,'A27':1,'A28':1},'Spagna':{'A1':4,'A2':0,'A3':4,'A4':2,'A5':1,'A6':3,'A7':2,'A8':12,'A9':4,'A10':1,'A11':867,'A12':12,'A13':8,'A14':0,'A15':1,'A16':7,'A17':12,'A18':4,'A19':49,'A20':2,'A21':421,'A22':428,'A23':32,'A24':36,'A25':0,'A26':0,'A27':1,'A28':0},'Flaminio – Piazza del Popolo':{'A1':3,'A2':1,'A3':5,'A4':3,'A5':1,'A6':3,'A7':0,'A8':3,'A9':0,'A10':1,'A11':958,'A12':9,'A13':11,'A14':0,'A15':1,'A16':3,'A17':5,'A18':3,'A19':51,'A20':2,'A21':410,'A22':459,'A23':0,'A24':432,'A25':0,'A26':0,'A27':4,'A28':0},'Lepanto':{'A1':6,'A2':1,'A3':9,'A4':1,'A5':1,'A6':3,'A7':0,'A8':0,'A9':0,'A10':3,'A11':365,'A12':6,'A13':13,'A14':0,'A15':2,'A16':3,'A17':4,'A18':2,'A19':9,'A20':2,'A21':413,'A22':39,'A23':456,'A24':0,'A25':0,'A26':0,'A27':0,'A28':0},'Ottaviano':{'A1':5,'A2':4,'A3':9,'A4':0,'A5':1,'A6':3,'A7':0,'A8':0,'A9':0,'A10':3,'A11':384,'A12':9,'A14':2,'A15':1,'A16':3,'A17':4,'A18':2,'A19':7,'A20':2,'A21':427,'A22':443,'A23':444,'A24':457,'A25':0,'A26':0,'A27':0,'A28':0},'Cipro':{'A1':5,'A2':0,'A3':2,'A4':2,'A5':1,'A6':3,'A7':2,'A8':3,'A9':0,'A10':0,'A11':261,'A12':6,'A13':11,'A14':2,'A15':1,'A16':3,'A17':8,'A18':2,'A19':23,'A20':2,'A21':458,'A22':46,'A23':457,'A24':410,'A25':0,'A26':0,'A27':0,'A28':0},'Valle Aurelia':{'A1':3,'A2':0,'A3':2,'A4':2,'A5':1,'A6':3,'A7':2,'A8':8,'A9':0,'A10':0,'A11':421,'A12':8,'A13':9,'A14':2,'A15':1,'A16':2,'A17':10,'A18':2,'A19':50,'A20':2,'A21':17,'A22':0,'A23':0,'A24':413,'A25':0,'A26':0,'A27':0,'A28':0},'Baldo degli Ubaldi':{'A1':6,'A2':0,'A3':8,'A4':7,'A5':2,'A6':9,'A7':7,'A8':12,'A9':0,'A10':0,'A11':623,'A12':6,'A13':14,'A14':2,'A15':1,'A16':13,'A17':25,'A18':4,'A19':0,'A20':2,'A21':44,'A22':44,'A23':41,'A24':427,'A25':0,'A26':0,'A27':0,'A28':0},'Cornelia':{'A1':5,'A2':0,'A3':6,'A4':7,'A5':1,'A6':3,'A7':3,'A8':19,'A9':0,'A10':0,'A11':805,'A12':8,'A13':10,'A14':2,'A15':1,'A16':15,'A17':24,'A18':4,'A19':7,'A20':4,'A21':426,'A22':46,'A23':457,'A24':458,'A25':0,'A26':0,'A27':0,'A28':0},'Battistini':{'A1':1,'A2':0,'A3':2,'A4':1,'A5':1,'A6':3,'A7':2,'A8':4,'A9':0,'A10':0,'A11':439,'A12':7,'A13':9,'A14':2,'A15':1,'A16':5,'A17':18,'A18':1,'A19':0,'A20':1,'A21':0,'A22':0,'A23':0,'A24':45,'A25':0,'A26':0,'A27':0,'A28':0}};
+            
+            const moduleDefinitions = {
+                "Modulo 1": {
+                    name: "Modulo 1",
+                    display_name: "Indicatori Alfanumerici Mezzi Superficie (Bus/Tram)",
+                    fields: [
+                        { id: "nome-rilevatore", name: "nomeRilevatore", label: "Nome Rilevatore", type: "text", required: true, placeholder: "Es. Mario Rossi" },
+                        { id: "stabilimento", name: "stabilimento", label: "Stabilimento", type: "select", required: true, options: stabilimentiOptions, placeholder: "Seleziona uno stabilimento" },
+                        { id: "bus-number", name: "busNumber", label: "Numero Vettura", type: "number", required: true, placeholder: "Es. 4589", min: 1 },
+                        { type: "text-label", content: "Segnalare i non funzionanti:", className: "block text-sm font-medium text-gray-700 mt-4 mb-2" },
+                        { id: "ind-linea-anteriore", name: "indLineaAnteriore", label: "Ind. Linea Anteriore", type: "checkbox" },
+                        { id: "ind-linea-laterali", name: "indLineaLaterali", label: "Ind. Linea Laterali", type: "checkbox" },
+                        { id: "ind-linea-posteriore", name: "indLineaPosteriore", label: "Ind. Linea Posteriore", type: "checkbox" },
+                        { id: "notes", name: "notes", label: "Note", type: "text", placeholder: "Aggiungi dettagli..." }
+                    ],
+                    tableHeaders: { keys: ["busNumber", "indLineaAnteriore", "indLineaLaterali", "indLineaPosteriore", "notes"], labels: ["Mezzo", "Ind. Ant.", "Ind. Lat.", "Ind. Post.", "Note"] },
+                    exportHeaders: { "Numero Mezzo": "busNumber", "Ind. Linea Anteriore": "indLineaAnteriore", "Ind. Linea Laterali": "indLineaLaterali", "Ind. Linea Posteriore": "indLineaPosteriore", "Note": "notes" }
+                },
+                "Modulo 2": {
+                    name: "Modulo 2",
+                    display_name: "Controlli Straordinari OBT",
+                    fields: [
+                        { id: "nome-rilevatore", name: "nomeRilevatore", label: "Nome Rilevatore", type: "text", required: true, placeholder: "Es. Mario Rossi" },
+                        { id: "rimessa-capolinea", name: "rimessaCapolinea", label: "Rimessa/Capolinea", type: "text", required: true, placeholder: "Es. Stazione Termini" },
+                        { id: "numero-vettura", name: "numeroVettura", label: "Numero Vettura", type: "number", placeholder: "Es. 8021" },
+                        { id: "numero-linea", name: "numeroLinea", label: "Numero Linea", type: "number", placeholder: "Es. 40" },
+                        { type: "info-box", content: "<strong>Segnare SPENTA</strong> ogni volta che si rileva l'OBT spenta (tranne nel caso di vetture nuove che spengono gli apparati essendo sotto quadro, in tal caso chiedere all'autista di accendere il quadro e verificare le funzionalità delle OBT di bordo). Solo se non si accendono, allora barrare la casella SPENTA.<br><br>In caso di guasto grave (vettura che viaggia senza OBT o con tutte le OBT fuori servizio) rilevato presso i capolinea chiamare il numero: <strong>0646954810</strong> dalle ore 7.00 alle ore 19.00." },
+                        { id: "in-servizio", name: "inServizio", label: "In servizio", type: "radio", options: ["Spenta", "Riaccesa"] },
+                        { id: "master-status", name: "masterStatus", label: "Master", type: "radio", options: ["Ok", "Non Ok"], className: "ok-nok", conditionalTarget: "master-code-wrapper" },
+                        { id: "master-code", name: "masterCode", label: "Codice Errore Master", type: "select-conditional", wrapperId: "master-code-wrapper", options: codeOptions, placeholder: "Seleziona codice errore" },
+                        { id: "slave1-status", name: "slave1Status", label: "Slave 1", type: "radio", options: ["Ok", "Non Ok"], className: "ok-nok", conditionalTarget: "slave1-code-wrapper" },
+                        { id: "slave1-code", name: "slave1Code", label: "Codice Errore Slave 1", type: "select-conditional", wrapperId: "slave1-code-wrapper", options: codeOptions, placeholder: "Seleziona codice errore" },
+                        { id: "slave2-status", name: "slave2Status", label: "Slave 2", type: "radio", options: ["Ok", "Non Ok"], className: "ok-nok", conditionalTarget: "slave2-code-wrapper" },
+                        { id: "slave2-code", name: "slave2Code", label: "Codice Errore Slave 2", type: "select-conditional", wrapperId: "slave2-code-wrapper", options: codeOptions, placeholder: "Seleziona codice errore" },
+                        { id: "slave3-status", name: "slave3Status", label: "Slave 3", type: "radio", options: ["Ok", "Non Ok"], className: "ok-nok", conditionalTarget: "slave3-code-wrapper" },
+                        { id: "slave3-code", name: "slave3Code", label: "Codice Errore Slave 3", type: "select-conditional", wrapperId: "slave3-code-wrapper", options: codeOptions, placeholder: "Seleziona codice errore" },
+                        { id: "notes", name: "notes", label: "Note", type: "text", placeholder: "Aggiungi dettagli..." }
+                    ],
+                    tableHeaders: { keys: ["numeroVettura", "numeroLinea", "inServizio", "master", "slave1", "slave2", "slave3", "notes"], labels: ["Vettura", "Linea", "Servizio", "Master", "Slave 1", "Slave 2", "Slave 3", "Note"] },
+                    exportHeaders: { "Numero Vettura": "numeroVettura", "Numero Linea": "numeroLinea", "In Servizio": "inServizio", "Master": "master", "Slave 1": "slave1", "Slave 2": "slave2", "Slave 3": "slave3", "Note": "notes" }
+                },
+                "Modulo 3": {
+                    name: "Modulo 3",
+                    display_name: "Verifica Obliteratrici a Bordo Vetture di Superficie",
+                     fields: [
+                        { id: "nome-rilevatore", name: "nomeRilevatore", label: "Nome Rilevatore", type: "text", required: true, placeholder: "Es. Mario Rossi" },
+                        { id: "stabilimento", name: "stabilimento", label: "Stabilimento", type: "select", required: true, options: stabilimentiOptions, placeholder: "Seleziona uno stabilimento" },
+                        { id: "numero-vettura", name: "numeroVettura", label: "Numero Vettura", type: "number", placeholder: "Es. 9050" },
+                        { id: "obm-ant", name: "obmAnteriore", label: "Obliteratrice Master Anteriore", type: "radio", options: ["ON", "OFF"], className: "on-off" },
+                        { id: "sc1", name: "sc1", label: "Lettore Smart Card 1", type: "radio", options: ["ON", "OFF", "Mancante"], className: "on-off" },
+                        { id: "ob2", name: "ob2", label: "Obliteratrice 2", type: "radio", options: ["ON", "OFF"], className: "on-off" },
+                        { id: "sc2", name: "sc2", label: "Lettore Smart Card 2", type: "radio", options: ["ON", "OFF", "Mancante"], className: "on-off" },
+                        { id: "ob3", name: "ob3", label: "Obliteratrice 3", type: "radio", options: ["ON", "OFF"], className: "on-off" },
+                        { id: "sc3", name: "sc3", label: "Lettore Smart Card 3", type: "radio", options: ["ON", "OFF", "Mancante"], className: "on-off" },
+                        { id: "ob4", name: "ob4", label: "Obliteratrice 4", type: "radio", options: ["ON", "OFF"], className: "on-off" },
+                        { id: "sc4", name: "sc4", label: "Lettore Smart Card 4", type: "radio", options: ["ON", "OFF", "Mancante"], className: "on-off" },
+                        { id: "notes", name: "notes", label: "Note", type: "text", placeholder: "Aggiungi dettagli..." }
+                    ],
+                    tableHeaders: { keys: ["numeroVettura", "obmAnteriore", "sc1", "ob2", "sc2", "ob3", "sc3", "ob4", "sc4", "notes"], labels: ["Vettura", "OBM Ant.", "SC 1", "OB 2", "SC 2", "OB 3", "SC 3", "OB 4", "SC 4", "Note"] },
+                    exportHeaders: { "Numero Vettura": "numeroVettura", "Obliteratrice Master Anteriore": "obmAnteriore", "Lettore Smart Card 1": "sc1", "Obliteratrice 2": "ob2", "Lettore Smart Card 2": "sc2", "Obliteratrice 3": "ob3", "Lettore Smart Card 3": "sc3", "Obliteratrice 4": "ob4", "Lettore Smart Card 4": "sc4", "Note": "notes" }
+                },
+                "Modulo 4": {
+                    name: "Modulo 4",
+                    display_name: "Monitoraggio Pedane Disabili",
+                     fields: [
+                        { id: "nome-rilevatore", name: "nomeRilevatore", label: "Nome Rilevatore", type: "text", required: true, placeholder: "Es. Mario Rossi" },
+                        { id: "linea", name: "linea", label: "Numero Linea", type: "number", placeholder: "Es. 105" },
+                        { id: "vettura", name: "vettura", label: "Numero Vettura", type: "number", placeholder: "Es. 4589" },
+                        { id: "stabilimento", name: "stabilimento", label: "Stabilimento", type: "select", options: stabilimentiOptions, placeholder: "Seleziona uno stabilimento" },
+                        { id: "capolinea", name: "capolinea", label: "Capolinea", type: "text", placeholder: "Es. Stazione Termini" },
+                        { id: "logo-ant", name: "logoAnteriore", label: "Logo Anteriore", type: "radio", options: ["SI", "NO", "DET."], className: "yes-no" },
+                        { id: "logo-lat", name: "logoLaterale", label: "Logo Laterale", type: "radio", options: ["SI", "NO", "DET."], className: "yes-no" },
+                        { id: "con-pedana", name: "conPedana", label: "Vettura con Pedana", type: "radio", options: ["SI", "NO"], className: "yes-no", conditionalTarget: "pedana-funz-wrapper" },
+                        { id: "pedana-funz", name: "pedanaFunzionante", label: "Pedana Funzionante", type: "radio-conditional", wrapperId: "pedana-funz-wrapper", options: ["SI", "NO"], className: "yes-no" },
+                        { id: "puls-autista", name: "pulsanteAutista", label: "Pulsante richiesta fermata disabili funzionante: Avviso Autista", type: "radio", options: ["SI", "NO"], className: "yes-no" },
+                        { id: "puls-esterno", name: "pulsanteEsterno", label: "Pulsante richiesta fermata disabili funzionante: Avviso Esterno", type: "radio", options: ["SI", "NO"], className: "yes-no" },
+                    ],
+                    tableHeaders: { keys: ["vettura", "stabilimento", "capolinea", "ora", "logoAnteriore", "logoLaterale", "conPedana", "pedanaFunzionante", "pulsanteAutista", "pulsanteEsterno"], labels: ["Vettura", "Stabilimento", "Capolinea", "Ora", "Logo Ant.", "Logo Lat.", "Con Pedana", "Pedana Funz.", "Avviso Autista", "Avviso Esterno"] },
+                    exportHeaders: { "Numero Vettura": "vettura", "Stabilimento": "stabilimento", "Capolinea": "capolinea", "Ora": "ora", "Logo Anteriore": "logoAnteriore", "Logo Laterale": "logoLaterale", "Vettura con Pedana": "conPedana", "Pedana Funzionante": "pedanaFunzionante", "Pulsante Avviso Autista": "pulsanteAutista", "Pulsante Avviso Esterno": "pulsanteEsterno" }
+                },
+                "Modulo 5": {
+                    name: "Modulo 5",
+                    display_name: "Monitoraggio Pulizie Treni linee Metropolitane: A, B, B1, C e Ferrovie Regionali",
+                     fields: [
+                        { id: "nome-rilevatore", name: "nomeRilevatore", label: "Nome Rilevatore", type: "text", required: true, placeholder: "Es. Mario Rossi" },
+                        { id: "linea-metro", name: "lineaMetro", label: "Linea Metro/Linea F.R.", type: "text", required: true, placeholder: "Es. Metro A" },
+                        { id: "orario-treno", name: "orarioTreno", label: "Orario Treno", type: "select", options: Array.from({length: 30}, (_, i) => i + 1), placeholder: "Seleziona orario" },
+                        { id: "carrozze", name: "carrozze", label: "Carrozze", type: "text", placeholder: "Es. 3-4" },
+                        { id: "pavimenti", name: "puliziaPavimenti", label: "Pulizia Pavimenti", type: "radio-rating", options: [1, 2, 3, 4] },
+                        { id: "finestrini", name: "puliziaFinestrini", label: "Pulizia Finestrini", type: "radio-rating", options: [1, 2, 3, 4] },
+                        { id: "soffitti", name: "puliziaSoffitti", label: "Pulizia Soffitti e Pareti", type: "radio-rating", options: [1, 2, 3, 4] },
+                        { id: "graffiti", name: "graffitiSuperfici", label: "Graffiti sulle Superfici e sui Vetri", type: "radio-rating", options: [1, 2, 3, 4] },
+                        { id: "ext1-pulizia", name: "ext1Pulizia", label: "ESTERNO Lato 1 Pulizia della Carrozza", type: "radio-rating", options: [1, 2, 3, 4] },
+                        { id: "ext1-graffiti", name: "ext1Graffiti", label: "ESTERNO Lato 1 Graffiti sulle Pareti e sui Vetri", type: "radio-rating", options: [1, 2, 3, 4] },
+                        { id: "ext2-pulizia", name: "ext2Pulizia", label: "ESTERNO Lato 2 Pulizia della Carrozza", type: "radio-rating", options: [1, 2, 3, 4] },
+                        { id: "ext2-graffiti", name: "ext2Graffiti", label: "ESTERNO Lato 2, Graffiti sulle Pareti e sui Vetri", type: "radio-rating", options: [1, 2, 3, 4] },
+                        { id: "notes", name: "notes", label: "Note", type: "text", placeholder: "Aggiungi dettagli..." }
+                    ],
+                    tableHeaders: { keys: ["orarioTreno", "carrozze", "puliziaPavimenti", "puliziaFinestrini", "puliziaSoffitti", "graffitiSuperfici", "ext1Pulizia", "ext1Graffiti", "ext2Pulizia", "ext2Graffiti", "notes"], labels: ["Orario Treno", "Carrozze", "Pavimenti", "Finestrini", "Soffitti", "Graffiti Int.", "Est. L1 Pul.", "Est. L1 Graff.", "Est. L2 Pul.", "Est. L2 Graff.", "Note"] },
+                    exportHeaders: { "Orario Treno": "orarioTreno", "Carrozze": "carrozze", "Pulizia Pavimenti": "puliziaPavimenti", "Pulizia Finestrini": "puliziaFinestrini", "Pulizia Soffitti e Pareti": "puliziaSoffitti", "Graffiti sulle Superfici e sui Vetri": "graffitiSuperfici", "ESTERNO Lato 1 Pulizia della Carrozza": "ext1Pulizia", "ESTERNO Lato 1 Graffiti sulle Pareti e sui Vetri": "ext1Graffiti", "ESTERNO Lato 2 Pulizia della Carrozza": "ext2Pulizia", "ESTERNO Lato 2, Graffiti sulle Pareti e sui Vetri": "ext2Graffiti", "Note": "notes" }
+                },
+                "Modulo 6": {
+                    name: "Modulo 6",
+                    display_name: "Monitoraggio Dotazioni e Pulizia Vetture di Superficie",
+                     fields: [
+                        { id: "nome-rilevatore", name: "nomeRilevatore", label: "Nome Rilevatore", type: "text", required: true, placeholder: "Es. Mario Rossi" },
+                        { id: "stabilimento", name: "stabilimento", label: "Stabilimento", type: "select", required: true, options: stabilimentiOptions, placeholder: "Seleziona uno stabilimento" },
+                        { type: "info-box", content: "Al termine del controllo il primo rilevatore della lista chiede all'A.D.E. in servizio alla gestione dello stabilimento quante vetture sono uscite e poi al C.T. della trazione il parco vetture effettivo dello stabilimento" },
+                        { id: "ade-servizio", name: "adeServizio", label: "A.D.E. in Servizio (Nome e cognome)", type: "text", required: true, placeholder: "Es. Luca Verdi" },
+                        { id: "vetture-servizio", name: "vettureServizio", label: "Vetture messe in servizio", type: "number", required: true, placeholder: "Es. 50" },
+                        { id: "ct-trazione", name: "ctTrazione", label: "C.T. Trazione", type: "text", required: true, placeholder: "Es. Anna Bianchi" },
+                        { id: "parco-vetture", name: "parcoVetture", label: "Totale parco vetture dello stabilimento", type: "number", required: true, placeholder: "Es. 75" },
+                        { id: "vettura", name: "vettura", label: "Numero Vettura", type: "number", placeholder: "Es. 4501" },
+                        { id: "pulizia-esterna", name: "puliziaEsterna", label: "Pulizia Esterna", type: "radio-rating", options: [1, 2, 3, 4] },
+                        { id: "pulizia-interna", name: "puliziaInterna", label: "Pulizia Interna", type: "radio-rating", options: [1, 2, 3, 4] },
+                        { id: "luci", name: "luci", label: "Luci", type: "radio-rating", options: [1, 2, 3, 4] },
+                        { id: "sedili", name: "statoSedili", label: "Stato Sedili", type: "radio-rating", options: [1, 2, 3, 4] },
+                    ],
+                    tableHeaders: { keys: ["vettura", "puliziaEsterna", "puliziaInterna", "luci", "statoSedili"], labels: ["Numero Vettura", "Pul. Esterna", "Pul. Interna", "Luci", "Stato Sedili"] },
+                    exportHeaders: { "Numero Vettura": "vettura", "Pulizia Esterna": "puliziaEsterna", "Pulizia Interna": "puliziaInterna", "Luci": "luci", "Stato Sedili": "statoSedili" }
+                },
+                "Modulo 7": {
+                    name: "Modulo 7",
+                    display_name: "Monitoraggio Aree di Fermata e Dotazioni",
+                    fields: [
+                        { id: "nome-rilevatore", name: "nomeRilevatore", label: "Nome Rilevatore", type: "text", required: true, placeholder: "Es. Mario Rossi" },
+                        { id: "linea", name: "linea", label: "Linea", type: "select", required: true, options: ["06 A", "06 R"], placeholder: "Seleziona una linea" }
+                    ]
+                },
+                "Modulo 8": {
+                    name: "Modulo 8",
+                    display_name: "Monitoraggio Aree Capolinea",
+                    fields: [
+                        { id: "nome-rilevatore", name: "nomeRilevatore", label: "Nome Rilevatore", type: "text", placeholder: "Es. Mario Rossi" },
+                        { id: "capolinea", name: "capolinea", label: "Capolinea", type: "text", placeholder: "Es. Stazione Termini" },
+                        { id: "addetto-capolinea", name: "addettoCapolinea", label: "Addetto Capolinea", type: "text", placeholder: "Es. Luca Verdi" },
+                        { id: "linee", name: "linee", label: "Linee", type: "text", placeholder: "Es. 40, 64, H" },
+                        { id: "data-ora-pulizia", name: "dataOraPulizia", label: "Data e ora attività di pulizia", type: "text", placeholder: "Es. 25/06/2025 10:30" },
+                        { type: "info-box", content: "Quando si controllano i bagni chimici, non si devono prendere in considerazione le seguenti voci: illuminazione interna, funzionamento areatore, acqua calda, presenza asciugamani elettrico o salviettine, presenza sapone, presenza cestino (solo nel bagno uomini)." },
+                    ],
+                    accordionFields: {
+                        'Strutture Capolinea (Gabbiotto)': [ { label: 'Pulizia pavimento', name: 'g_puliziaPavimento' }, { label: 'Pulizia pareti', name: 'g_puliziaPareti' }, { label: 'Illuminazione interna', name: 'g_illuminazione' }, { label: 'Funzionamento serratura', name: 'g_serratura' }, ],
+                        'Ambiente (Gabbiotto)': [ { label: 'Verifica presenza condizionatore', name: 'a_presenzaCondizionatore' }, { label: 'Funzionamento impianto di climatizzazione', name: 'a_funzionamentoClima' }, { label: 'Presenza cestino rifiuti', name: 'a_presenzaCestino' }, ],
+                        'Sicurezza (Gabbiotto)': [ { label: 'Estintore verifica presenza', name: 's_presenzaEstintore' }, { label: 'Estintore verifica efficienza', name: 's_efficienzaEstintore' }, ],
+                        'Piazzale Capolinea': [ { label: 'Pulizia piazzale', name: 'p_puliziaPiazzale' }, { label: 'Pulizia stalli', name: 'p_puliziaStalli' }, { label: 'Stato del manto stradale', name: 'p_mantoStradale' }, { label: 'Visibilità della segnaletica orizzontale e verticale', name: 'p_visibilitaSegnaletica' }, { label: 'Accessibilità disabili banchine (rampe)', name: 'p_accessibilitaBanchine' }, { label: 'Integrità paline (indicare n.impianto)', name: 'p_integritaPaline' }, ],
+                        'Servizi Igienici Uomini': [ { label: 'Tipologia (struttura fissa, bagno chimico, convenzione)', name: 'u_tipologia', type: 'text' }, { label: 'Pulizia pavimento', name: 'u_puliziaPavimento' }, { label: 'Pulizia pareti', name: 'u_puliziaPareti' }, { label: 'Illuminazione interna', name: 'u_illuminazione' }, { label: 'Integrità porta', name: 'u_integritaPorta' }, { label: 'Funzionamento serratura', name: 'u_funzionamentoSerratura' }, { label: 'Funzionamento aeratore (se presente)', name: 'u_funzionamentoAeratore' }, { label: 'Pulizia sanitari', name: 'u_puliziaSanitari' }, { label: 'Integrità sanitari', name: 'u_integritaSanitari' }, { label: 'Funzionamento scarico', name: 'u_funzionamentoScarico' }, { label: 'Acqua', name: 'u_acqua' }, { label: 'Acqua calda', name: 'u_acquaCalda' }, { label: 'Presenza carta igienica', name: 'u_presenzaCarta' }, { label: 'Presenza asciugamani elettrico o salviettine', name: 'u_presenzaAsciugamani' }, { label: 'Presenza sapone', name: 'u_presenzaSapone' }, { label: 'Presenza cestino', name: 'u_presenzaCestino' }, ],
+                        'Servizi Igienici Donne': [ { label: 'Tipologia (struttura fissa, bagno chimico, convenzione)', name: 'd_tipologia', type: 'text' }, { label: 'Pulizia pavimento', name: 'd_puliziaPavimento' }, { label: 'Pulizia pareti', name: 'd_puliziaPareti' }, { label: 'Illuminazione interna', name: 'd_illuminazione' }, { label: 'Integrità porta', name: 'd_integritaPorta' }, { label: 'Funzionamento serratura', name: 'd_funzionamentoSerratura' }, { label: 'Funzionamento aeratore (se presente)', name: 'd_funzionamentoAeratore' }, { label: 'Pulizia sanitari', name: 'd_puliziaSanitari' }, { label: 'Integrità sanitari', name: 'd_integritaSanitari' }, { label: 'Funzionamento scarico', name: 'd_funzionamentoScarico' }, { label: 'Acqua', name: 'd_acqua' }, { label: 'Acqua calda', name: 'd_acquaCalda' }, { label: 'Presenza carta igienica', name: 'd_presenzaCarta' }, { label: 'Presenza asciugamani elettrico o salviettine', name: 'd_presenzaAsciugamani' }, { label: 'Presenza sapone', name: 'd_presenzaSapone' }, { label: 'Presenza cestino', name: 'd_presenzaCestino' }, ],
+                    },
+                    tableHeaders: { keys: ["capolinea", "orarioVerifica"], labels: ["Capolinea", "Orario Verifica"] },
+                    exportHeaders: {} 
+                },
+                "Modulo 9": {
+                    name: "Modulo 9",
+                    display_name: "Dotazione Pulizia Stazioni",
+                    fields: [
+                        // Campi generati dinamicamente
+                    ]
+                },
+                "Default": {
+                    name: "Default",
+                    display_name: "Controllo Qualità Generale Mezzi",
+                    fields: [
+                        { id: "bus-number", name: "busNumber", label: "Numero Autobus", type: "number", required: true, placeholder: "Es. 4589", min: 0 },
+                        { id: "internal-cleaning", name: "internalCleaning", label: "Pulizia Interna", type: "radio-rating", options: [1, 2, 3, 4], required: true },
+                        { id: "external-cleaning", name: "externalCleaning", label: "Pulizia Esterna", type: "radio-rating", options: [1, 2, 3, 4], required: true },
+                        { id: "lights", name: "lights", label: "Luci", type: "radio-rating", options: [1, 2, 3, 4], required: true },
+                        { id: "tap-and-go", name: "tapAndGo", label: "Tap&Go Funzionante", type: "radio", options: ["Sì", "No"], className: "yes-no", required: true },
+                        { id: "notes", name: "notes", label: "Note", type: "text", placeholder: "Aggiungi dettagli..." }
+                    ],
+                    tableHeaders: { keys: ["busNumber", "internalCleaning", "externalCleaning", "lights", "tapAndGo", "notes", "timestamp_date", "timestamp_time"], labels: ["Bus", "Int.", "Est.", "Luci", "T&G", "Note", "Data", "Ora"] },
+                    exportHeaders: { "Numero Autobus": "busNumber", "Pulizia Interna (1-4)": "internalCleaning", "Pulizia Esterna (1-4)": "externalCleaning", "Luci (1-4)": "lights", "Tap&Go": "tapAndGo", "Note": "notes", "Data Controllo": "timestamp_date", "Ora Controllo": "timestamp_time" }
+                }
+            };
+
+            // --- Inizializzazione ---
+            function initialize() {
+                setupModuleSelection();
+                setupEventListeners();
+            }
+
+            function setupEventListeners() {
+                qualityCheckForm.addEventListener('submit', handleAddCheck);
+                exportButton.addEventListener('click', exportToExcel);
+                backToModulesButton.addEventListener('click', handleBackToModules);
+                document.getElementById('alert-ok').addEventListener('click', () => hideModal(alertModal));
+                document.getElementById('confirm-cancel').addEventListener('click', () => hideModal(confirmModal));
+                document.getElementById('confirm-ok').addEventListener('click', () => {
+                    if (confirmCallback) confirmCallback();
+                    hideModal(confirmModal);
+                });
+            }
+            
+            function showModal(modal) { modal.classList.remove('hidden'); }
+            function hideModal(modal) { modal.classList.add('hidden'); }
+            function showConfirm(title, message, callback) {
+                document.getElementById('confirm-title').textContent = title;
+                document.getElementById('confirm-message').textContent = message;
+                confirmCallback = callback;
+                showModal(confirmModal);
+            }
+            function showAlert(title, message) {
+                document.getElementById('alert-title').textContent = title;
+                document.getElementById('alert-message').textContent = message;
+                showModal(alertModal);
+            }
+
+            // --- Setup UI (Selezione Moduli) ---
+            function setupModuleSelection() {
+                moduleButtonsContainer.innerHTML = '';
+                for (let i = 1; i <= TOTAL_MODULES; i++) {
+                    const button = document.createElement('button');
+                    const moduleName = `Modulo ${i}`;
+                    const moduleConf = moduleDefinitions[moduleName] || { display_name: moduleName };
+                    button.className = 'module-btn bg-white p-4 rounded-lg shadow hover:shadow-xl text-center';
+                    button.innerHTML = `<div class="text-base font-semibold text-gray-700">${moduleConf.display_name || moduleName}</div>`;
+                    button.dataset.module = moduleName;
+                    button.addEventListener('click', () => selectModule(button.dataset.module));
+                    moduleButtonsContainer.appendChild(button);
+                }
+            }
+            
+            // --- Logica di Navigazione ---
+            function selectModule(moduleName) {
+                selectedModule = moduleName;
+                const moduleConf = moduleDefinitions[moduleName] || moduleDefinitions["Default"];
+                
+                moduleSubtitle.textContent = `Controllo: ${moduleConf.display_name || moduleName}`;
+                
+                // CHANGE: Logic to move action buttons for Module 6
+                if (moduleName === 'Modulo 6') {
+                    // Place buttons right after the form for better visibility
+                    sessionInfoM6.insertAdjacentElement('beforebegin', actionButtons);
+                } else {
+                    // Place buttons before the results table for all other modules
+                    resultsContainer.insertAdjacentElement('beforebegin', actionButtons);
+                }
+
+                clearInterval(sessionTimeUpdater);
+                document.querySelectorAll('[id^="session-info-m"]').forEach(el => el.classList.add('hidden'));
+
+                const sessionDate = new Date().toLocaleDateString("it-IT");
+                
+                switch(moduleName) {
+                    case 'Modulo 1': sessionInfoM1.classList.remove('hidden'); sessionDateM1.textContent = sessionDate; break;
+                    case 'Modulo 2': sessionInfoM2.classList.remove('hidden'); sessionDateM2.textContent = sessionDate;
+                        const updateTime = () => { sessionTimeM2.textContent = new Date().toLocaleTimeString("it-IT", { hour: '2-digit', minute: '2-digit', second: '2-digit' }); };
+                        updateTime();
+                        sessionTimeUpdater = setInterval(updateTime, 1000);
+                        break;
+                    case 'Modulo 3': sessionInfoM3.classList.remove('hidden'); sessionDateM3.textContent = sessionDate; break;
+                    case 'Modulo 4': sessionInfoM4.classList.remove('hidden'); sessionDateM4.textContent = sessionDate; break;
+                    case 'Modulo 5': sessionInfoM5.classList.remove('hidden'); sessionDateM5.textContent = sessionDate; break;
+                    case 'Modulo 6': sessionInfoM6.classList.remove('hidden'); sessionDateM6.textContent = sessionDate; break;
+                    case 'Modulo 7': sessionInfoM7.classList.remove('hidden'); sessionDateM7.textContent = sessionDate; break;
+                    case 'Modulo 8': sessionInfoM8.classList.remove('hidden'); sessionDateM8.textContent = sessionDate; orarioVerificaM8 = null; break;
+                    case 'Modulo 9': sessionInfoM9.classList.remove('hidden'); sessionDateM9.textContent = sessionDate; break;
+                }
+                
+                renderForm(moduleName);
+                moduleSelectionSection.classList.add('hidden');
+                mainInterface.classList.remove('hidden');
+                
+                if (!['Modulo 7', 'Modulo 8', 'Modulo 9'].includes(moduleName)) {
+                    qualityCheckForm.reset(); 
+                }
+                qualityChecks = [];
+                renderTable();
+                if(qualityCheckForm.elements.length > 0) {
+                     qualityCheckForm.elements[0].focus();
+                }
+            }
+
+            function handleBackToModules() {
+                if (['Modulo 7', 'Modulo 8', 'Modulo 9'].includes(selectedModule) || qualityChecks.length > 0) {
+                    showConfirm("Tornare alla selezione?", "I dati inseriti non sono stati esportati e andranno persi. Sei sicuro?", showModuleSelection);
+                } else {
+                    showModuleSelection();
+                }
+            }
+            
+            function showModuleSelection() {
+                selectedModule = '';
+                moduleSubtitle.textContent = '';
+                mainInterface.classList.add('hidden');
+                moduleSelectionSection.classList.remove('hidden');
+                document.querySelectorAll('[id^="session-info-m"]').forEach(el => el.classList.add('hidden'));
+                clearInterval(sessionTimeUpdater);
+            }
+
+            // --- Rendering Dinamico del Form ---
+            function renderForm(moduleName) {
+                const moduleConf = moduleDefinitions[moduleName] || moduleDefinitions["Default"];
+                qualityCheckForm.innerHTML = '';
+                qualityCheckForm.classList.remove('hidden');
+                module7LegendContainer.classList.add('hidden');
+                module9Container.innerHTML = '';
+                document.getElementById('results-container').classList.add('hidden'); 
+                document.getElementById('no-data-message').classList.remove('hidden');
+                exportButton.disabled = true;
+                
+                // Logica specifica per moduli complessi
+                if(moduleName === 'Modulo 8') { renderFormM8(); return; }
+                if (moduleName === 'Modulo 9') { renderFormM9(); return; }
+                if (moduleName === 'Modulo 7') { renderFormM7(); return; }
+
+                // Logica standard
+                moduleConf.fields.forEach(field => {
+                    const fieldWrapper = document.createElement('div');
+                    let inputHtml = '';
+                    const commonInputClasses = "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition";
+
+                    switch (field.type) {
+                        case 'number': case 'text':
+                            inputHtml = `<label for="${field.id}" class="block text-sm font-medium text-gray-700 mb-2">${field.label}</label>
+                                <input type="${field.type}" id="${field.id}" name="${field.name}" ${field.required ? 'required' : ''} 
+                                       placeholder="${field.placeholder || ''}" ${field.min !== undefined ? `min="${field.min}"` : ''} class="${commonInputClasses}">`;
+                            break;
+                        case 'select':
+                             inputHtml = `<label for="${field.id}" class="block text-sm font-medium text-gray-700 mb-2">${field.label}</label>
+                                <select id="${field.id}" name="${field.name}" ${field.required ? 'required' : ''} class="${commonInputClasses}">
+                                    <option value="" disabled selected>${field.placeholder}</option>
+                                    ${field.options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                                </select>`;
+                            break;
+                        case 'select-conditional':
+                             fieldWrapper.id = field.wrapperId;
+                             fieldWrapper.className = 'conditional-wrapper hidden pl-4 pt-2';
+                             inputHtml = `<label for="${field.id}" class="block text-sm font-medium text-gray-700 mb-2">${field.label}</label>
+                                <select id="${field.id}" name="${field.name}" class="${commonInputClasses}">
+                                    <option value="" disabled selected>${field.placeholder}</option>
+                                    ${field.options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                                </select>`;
+                            break;
+                        case 'radio-conditional':
+                             fieldWrapper.id = field.wrapperId;
+                             fieldWrapper.className = 'conditional-wrapper hidden pl-4 pt-2';
+                             inputHtml = `
+                                <label class="block text-sm font-medium text-gray-700 mb-2">${field.label}</label>
+                                <div class="custom-radio-group custom-radio ${field.className || ''}" id="${field.id}">
+                                    ${field.options.map(option => `
+                                        <div class="flex-1 min-w-[50px]">
+                                            <input type="radio" id="${field.name}-${option.toString().toLowerCase().replace(/ /g, '-')}" name="${field.name}" value="${option}">
+                                            <label for="${field.name}-${option.toString().toLowerCase().replace(/ /g, '-')}" class="flex-1">${option}</label>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                               `;
+                            break;
+                        case 'radio-rating': case 'radio':
+                            const groupClass = field.type === 'radio-rating' ? 'custom-radio' : `custom-radio ${field.className || ''}`;
+                            inputHtml = `
+                                <label class="block text-sm font-medium text-gray-700 mb-2">${field.label}</label>
+                                <div class="custom-radio-group ${groupClass}" id="${field.name}">
+                                    ${field.options.map(option => `
+                                        <div class="flex-1 min-w-[50px]">
+                                            <input type="radio" id="${field.name}-${option.toString().toLowerCase().replace(/ /g, '-')}" name="${field.name}" value="${option}" ${field.required ? 'required' : ''} ${field.conditionalTarget ? `data-conditional-target="${field.conditionalTarget}"`: ''}>
+                                            <label for="${field.name}-${option.toString().toLowerCase().replace(/ /g, '-')}" class="flex-1">${option}</label>
+                                        </div>`).join('')}
+                                </div>`;
+                            break;
+                        case 'checkbox':
+                            inputHtml = `<div class="custom-checkbox custom-checkbox-group">
+                                    <input type="checkbox" id="${field.id}" name="${field.name}">
+                                    <label for="${field.id}" class="flex-1">${field.label}</label>
+                                </div>`;
+                            fieldWrapper.classList.add('pt-2');
+                            break;
+                        case 'text-label':
+                            inputHtml = `<p class="${field.className || ''}">${field.content}</p>`;
+                            break;
+                        case 'info-box':
+                            fieldWrapper.className = 'p-4 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 text-sm rounded-r-lg leading-relaxed';
+                            inputHtml = field.content;
+                            break;
+                    }
+                    if(['text', 'number', 'select', 'radio', 'checkbox', 'text-label'].includes(field.type)) {
+                        fieldWrapper.className = 'field-container';
+                    }
+                    fieldWrapper.innerHTML = inputHtml;
+                    qualityCheckForm.appendChild(fieldWrapper);
+                });
+
+                // Gestione Listener e pulsanti
+                const setupListener = (elementName, sessionElement, defaultValue) => {
+                    document.querySelector(`[name="${elementName}"]`)?.addEventListener('input', e => { sessionElement.textContent = e.target.value || defaultValue; });
+                };
+                const setupChangeListener = (elementName, sessionElement, defaultValue) => {
+                     document.querySelector(`[name="${elementName}"]`)?.addEventListener('change', e => { sessionElement.textContent = e.target.value || defaultValue; });
+                };
+
+                switch (moduleName) {
+                    case 'Modulo 1': setupListener('nomeRilevatore', sessionRilevatoreM1, 'Nessuno'); setupChangeListener('stabilimento', sessionEstablishmentM1, 'Nessuno'); break;
+                    case 'Modulo 2': setupListener('nomeRilevatore', sessionRilevatoreM2, 'Nessuno'); setupListener('rimessaCapolinea', sessionLocationM2, 'Nessuno'); break;
+                    case 'Modulo 3': setupListener('nomeRilevatore', sessionRilevatoreM3, 'Nessuno'); setupChangeListener('stabilimento', sessionEstablishmentM3, 'Nessuno'); break;
+                    case 'Modulo 4': setupListener('nomeRilevatore', sessionRilevatoreM4, 'Nessuno'); setupListener('linea', sessionLineaM4, 'Nessuna'); break;
+                    case 'Modulo 5': setupListener('nomeRilevatore', sessionRilevatoreM5, 'Nessuno'); setupListener('lineaMetro', sessionLineaM5, 'Nessuna'); break;
+                    case 'Modulo 6': setupListener('nomeRilevatore', sessionRilevatoreM6, 'Nessuno'); setupChangeListener('stabilimento', sessionStabilimentoM6, 'Nessuno'); setupListener('adeServizio', sessionAdeM6, 'N/D'); setupListener('vettureServizio', sessionVettureServizioM6, 'N/D'); setupListener('ctTrazione', sessionCtTrazioneM6, 'N/D'); setupListener('parcoVetture', sessionParcoVettureM6, 'N/D'); break;
+                }
+
+                 document.querySelectorAll('input[type="radio"][data-conditional-target]').forEach(radio => {
+                       radio.addEventListener('change', e => {
+                           const wrapper = document.getElementById(e.target.dataset.conditionalTarget);
+                           if (wrapper) {
+                               const shouldShow = e.target.value === 'Non Ok' || e.target.value === 'SI';
+                               wrapper.classList.toggle('hidden', !shouldShow);
+                               wrapper.querySelectorAll('input, select').forEach(input => {
+                                   // Conditional fields are not required by default, only if shown
+                                   input.required = shouldShow;
+                                   if (!shouldShow) {
+                                       if(input.type === 'radio' || input.type === 'checkbox') input.checked = false;
+                                       else input.value = '';
+                                   }
+                               });
+                           }
+                       });
+                   });
+
+                if (!['Modulo 7', 'Modulo 9'].includes(moduleName)) {
+                    const submitButtonDiv = document.createElement('div');
+                    submitButtonDiv.className = 'mt-8';
+                    submitButtonDiv.innerHTML = `<button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md main-button">${moduleName === 'Modulo 8' ? 'Aggiungi Rilevazione Capolinea' : 'Aggiungi Controllo'}</button>`;
+                    qualityCheckForm.appendChild(submitButtonDiv);
+                }
+            }
+
+            // --- Gestione Dati ---
+            function handleAddCheck(event) {
+                event.preventDefault();
+                const formData = new FormData(qualityCheckForm);
+                const moduleConf = moduleDefinitions[selectedModule];
+                
+                const newCheck = { id: Date.now(), module: selectedModule };
+                const now = new Date();
+                newCheck.timestamp_date = now.toLocaleDateString("it-IT");
+                const time = now.toLocaleTimeString("it-IT", { hour: '2-digit', minute: '2-digit' });
+
+                if (selectedModule === 'Modulo 4') newCheck.ora = time;
+                else newCheck.timestamp_time = time;
+                
+                 if (selectedModule === 'Modulo 8' && qualityChecks.length === 0) {
+                      orarioVerificaM8 = time; 
+                 }
+                 if (selectedModule === 'Modulo 8') {
+                       newCheck.orarioVerifica = orarioVerificaM8;
+                       sessionOrarioM8.textContent = orarioVerificaM8 || 'N/D';
+                 }
+                
+                moduleConf.fields.forEach(field => {
+                    if (!field.name || field.type === 'info-box') return;
+                    if (field.type === 'checkbox') {
+                        newCheck[field.name] = formData.has(field.name);
+                    } else {
+                        newCheck[field.name] = formData.get(field.name);
+                    }
+                });
+
+                if(selectedModule === 'Modulo 8') {
+                    for (const pair of formData.entries()) {
+                       newCheck[pair[0]] = pair[1];
+                    }
+                }
+                
+                if(selectedModule === 'Modulo 2'){
+                    newCheck.master = newCheck.masterStatus === "Non Ok" ? `Non Ok (${newCheck.masterCode || 'N/D'})` : newCheck.masterStatus;
+                    newCheck.slave1 = newCheck.slave1Status === "Non Ok" ? `Non Ok (${newCheck.slave1Code || 'N/D'})` : newCheck.slave1Status;
+                    newCheck.slave2 = newCheck.slave2Status === "Non Ok" ? `Non Ok (${newCheck.slave2Code || 'N/D'})` : newCheck.slave2Status;
+                    newCheck.slave3 = newCheck.slave3Status === "Non Ok" ? `Non Ok (${newCheck.slave3Code || 'N/D'})` : newCheck.slave3Status;
+                }
+
+                qualityChecks.unshift(newCheck);
+                renderTable();
+                
+                const fieldsToKeep = ['nomeRilevatore', 'stabilimento', 'rimessaCapolinea', 'linea', 'lineaMetro', 'adeServizio', 'vettureServizio', 'ctTrazione', 'parcoVetture', 'capolinea', 'addettoCapolinea', 'linee', 'dataOraPulizia', 'metro', 'stazione'];
+                Array.from(qualityCheckForm.elements).forEach(element => {
+                    const keepField = fieldsToKeep.includes(element.name);
+                    if(element.type === 'submit' || keepField) return;
+
+                    if (element.type === 'radio' || element.type === 'checkbox') {
+                        element.checked = false;
+                    } else if(element.tagName !== 'SELECT'){
+                        element.value = '';
+                    } else if (element.tagName === 'SELECT' && !keepField) {
+                        element.selectedIndex = 0;
+                    }
+
+                    if (element.closest('.conditional-wrapper')) {
+                        element.closest('.conditional-wrapper').classList.add('hidden');
+                    }
+                });
+                
+                const nextFocusEl = qualityCheckForm.elements['vettura'] || qualityCheckForm.elements['orarioTreno'] || qualityCheckForm.elements['numeroVettura'] || qualityCheckForm.elements['busNumber'];
+                nextFocusEl?.focus();
+            }
+
+            function removeCheck(id) {
+                qualityChecks = qualityChecks.filter(check => check.id !== id);
+                renderTable();
+            }
+
+            // --- Rendering Tabella ---
+            function renderTable() {
+                const moduleConf = moduleDefinitions[selectedModule] || moduleDefinitions["Default"];
+                
+                resultsTableHead.innerHTML = '';
+                resultsTableBody.innerHTML = '';
+
+                if (['Modulo 7', 'Modulo 9'].includes(moduleConf.name)) { 
+                    document.getElementById('results-container').classList.add('hidden');
+                    return;
+                }
+                document.getElementById('results-container').classList.remove('hidden');
+
+                moduleConf.tableHeaders.labels.forEach(headerText => {
+                    const th = document.createElement('th');
+                    th.className = 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider';
+                    if ((moduleConf.name !== "Modulo 1" && !["Note", "Carrozze", "Capolinea", "Stabilimento", "Numero Linea", "Numero Vettura", "Vettura"].includes(headerText)) || ["Int.", "Est.", "Luci", "Azione", "Ind. Ant.", "Ind. Lat.", "Ind. Post."].includes(headerText) ) {
+                         th.classList.add('text-center');
+                    }
+                    th.textContent = headerText;
+                    resultsTableHead.appendChild(th);
+                });
+                const actionTh = document.createElement('th');
+                actionTh.className = 'px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider';
+                actionTh.textContent = 'Azione';
+                resultsTableHead.appendChild(actionTh);
+
+                const hasData = qualityChecks.length > 0;
+                noDataMessage.classList.toggle('hidden', !hasData);
+                document.getElementById('results-container').classList.toggle('hidden', !hasData);
+                exportButton.disabled = !hasData && !['Modulo 8'].includes(selectedModule);
+                
+                if (hasData) {
+                    qualityChecks.forEach(check => {
+                        const row = document.createElement('tr');
+                        row.className = "bg-white";
+                        
+                        moduleConf.tableHeaders.keys.forEach(key => {
+                            const td = document.createElement('td');
+                            td.className = "px-6 py-4 whitespace-nowrap text-sm text-gray-700";
+                            td.setAttribute('data-label', moduleConf.tableHeaders.labels[moduleConf.tableHeaders.keys.indexOf(key)]);
+                            
+                            let displayValue = check[key] == null ? '–' : check[key];
+                            
+                            if (key.startsWith('master') || key.startsWith('slave')) {
+                                td.classList.add('text-center');
+                                if (String(displayValue).includes('Non Ok')) td.classList.add('text-red-600', 'font-semibold');
+                            } else if(!['busNumber', 'numeroVettura', 'numeroLinea', 'vettura', 'linea', 'stabilimento', 'capolinea', 'ora', 'notes', 'orarioTreno', 'carrozze'].includes(key)) {
+                                td.classList.add('text-center');
+                            }
+
+                            if(key === 'pedanaFunzionante' && check.conPedana === 'NO') {
+                                displayValue = '–';
+                            }
+
+                            if (typeof displayValue === 'boolean') {
+                                displayValue = displayValue ? 'Non Funzionante' : 'Funzionante';
+                            }
+                            
+                            td.textContent = displayValue;
+                            if (key === 'vettura' || key === 'carrozze' || key === 'orarioTreno' || key === 'capolinea' || key === 'numeroVettura' || key === 'busNumber' || key === 'linea') {
+                                td.classList.add('font-medium', 'text-gray-900', 'text-center');
+                            }
+                            row.appendChild(td);
+                        });
+
+                        const actionTd = document.createElement('td');
+                        actionTd.className = "px-6 py-4 whitespace-nowrap text-sm font-medium text-center";
+                        actionTd.setAttribute('data-label', 'Azione');
+                        actionTd.innerHTML = `<button data-id="${check.id}" class="remove-btn text-red-600 hover:text-red-800 transition">Rimuovi</button>`;
+                        row.appendChild(actionTd);
+                        resultsTableBody.appendChild(row);
+                    });
+                }
+                
+                document.querySelectorAll('.remove-btn').forEach(button => {
+                    button.addEventListener('click', (e) => removeCheck(Number(e.target.dataset.id)));
+                });
+            }
+            
+            // --- Logica Modulo 7 ---
+            // START FIX: Corrected Module 7 form rendering function
+            function renderFormM7() {
+                const moduleConf = moduleDefinitions['Modulo 7'];
+                const commonInputClasses = "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition";
+                qualityCheckForm.innerHTML = ''; // Clear the form
+
+                // Correctly loop through fields and generate HTML based on type
+                moduleConf.fields.forEach(field => {
+                    const fieldWrapper = document.createElement('div');
+                    let inputHtml = '';
+                    const labelHtml = `<label for="${field.id}" class="block text-sm font-medium text-gray-700 mb-2">${field.label}</label>`;
+
+                    switch (field.type) {
+                        case 'text':
+                            inputHtml = `<input type="text" id="${field.id}" name="${field.name}" ${field.required ? 'required' : ''} 
+                                               placeholder="${field.placeholder || ''}" class="${commonInputClasses}">`;
+                            break;
+                        case 'select':
+                            inputHtml = `<select id="${field.id}" name="${field.name}" ${field.required ? 'required' : ''} class="${commonInputClasses}">
+                                                 <option value="" disabled selected>${field.placeholder}</option>
+                                                 ${field.options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                                             </select>`;
+                            break;
+                    }
+                    
+                    fieldWrapper.innerHTML = labelHtml + inputHtml;
+                    qualityCheckForm.appendChild(fieldWrapper);
+                });
+
+                // Add back the event listeners which are specific to this module
+                document.querySelector('[name="linea"]').addEventListener('change', handleLineaChangeM7);
+                document.querySelector('[name="nomeRilevatore"]').addEventListener('input', e => { 
+                    sessionRilevatoreM7.textContent = e.target.value || 'Nessuno'; 
+                });
+            }
+            // END FIX
+
+            function handleLineaChangeM7(event) {
+                const selectedLinea = event.target.value;
+                sessionLineaM7.textContent = selectedLinea || 'Nessuna';
+                resultsTableBody.innerHTML = '';
+                resultsTableHead.innerHTML = '';
+                module7LegendContainer.classList.add('hidden');
+                document.getElementById('results-container').classList.add('hidden');
+                
+                if (selectedLinea === '06 A') {
+                    renderImpiantiTableM7(impianti06A);
+                } else if (selectedLinea === '06 R') {
+                    renderImpiantiTableM7(impianti06R);
+                }
+            }
+
+            function renderImpiantiTableM7(impiantiList) {
+                document.getElementById('results-container').classList.remove('hidden');
+                noDataMessage.classList.add('hidden');
+                module7LegendContainer.innerHTML = `<div class="p-4 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 text-sm rounded-r-lg leading-relaxed mb-4">
+                    <p><strong>Legenda Condizioni Box:</strong> B=linee ben visibili; S=Limiti del box e delle strisce diagonali visibili in luce diurna; M=Limiti del box e/o delle strisce diagonali visibili con difficoltà; I=Box di fermata e/o strisce diagonali non visibili; NP=Non Presente</p>
+                    <p><strong>Per tutti gli altri:</strong> B=Buono stato; P=Pericolante; G=Graffitato/Ammalorato; GL=Graffitato Leggibile; NP=Non Presente</p>
+                </div>`;
+                module7LegendContainer.classList.remove('hidden');
+
+                const headers = ["Impianto", "Condizioni Box", "Pensilina", "Mappe e cond. trasp.", "N° Pali", "Stato Palo", "N° Etic. Braille", "Tabella", "Info Leggibili", "Stato Doghe", "Lunette e Denom.", "N° Imp. Visibile", "Tav. Informativa"];
+                resultsTableHead.innerHTML = headers.map(h => `<th class="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">${h}</th>`).join('');
+
+                const createSelect = (name, options) => {
+                    const optsHtml = options.map(o => `<option value="${o}">${o}</option>`).join('');
+                    return `<select name="${name}" class="w-full p-1 border border-gray-300 rounded-md"><option value=""></option>${optsHtml}</select>`;
+                };
+                const createInput = (name) => `<input type="number" name="${name}" class="w-full p-1 border border-gray-300 rounded-md">`;
+
+                const rowsHtml = impiantiList.map((impianto, index) => `
+                    <tr class="bg-white">
+                        <td class="px-2 py-2 whitespace-nowrap text-sm font-medium text-gray-900" data-label="Impianto">${impianto}</td>
+                        <td class="px-2 py-2" data-label="Condizioni Box">${createSelect(`condizioniBox_${index}`, ['B', 'S', 'M', 'I', 'NP'])}</td>
+                        <td class="px-2 py-2" data-label="Pensilina">${createSelect(`pensilina_${index}`, ['B', 'P', 'G', 'NP'])}</td>
+                        <td class="px-2 py-2" data-label="Mappe">${createSelect(`mappe_${index}`, ['SI', 'NO', 'G'])}</td>
+                        <td class="px-2 py-2" data-label="N° Pali">${createInput(`numPali_${index}`)}</td>
+                        <td class="px-2 py-2" data-label="Stato Palo">${createSelect(`statoPalo_${index}`, ['B', 'P', 'G'])}</td>
+                        <td class="px-2 py-2" data-label="N° Etic. Braille">${createInput(`numBraille_${index}`)}</td>
+                        <td class="px-2 py-2" data-label="Tabella">${createSelect(`tabella_${index}`, ['B', 'P', 'G'])}</td>
+                        <td class="px-2 py-2" data-label="Info Leggibili">${createSelect(`infoLeggibili_${index}`, ['SI', 'NO'])}</td>
+                        <td class="px-2 py-2" data-label="Stato Doghe">${createSelect(`statoDoghe_${index}`, ['NP', 'B', 'P', 'G', 'GL'])}</td>
+                        <td class="px-2 py-2" data-label="Lunette">${createSelect(`lunette_${index}`, ['B', 'P', 'G'])}</td>
+                        <td class="px-2 py-2" data-label="N° Imp. Visibile">${createSelect(`numImpiantoVisibile_${index}`, ['SI', 'NO'])}</td>
+                        <td class="px-2 py-2" data-label="Tav. Informativa">${createSelect(`tavolettaInformativa_${index}`, ['B', 'P', 'G', 'NP'])}</td>
+                    </tr>
+                `).join('');
+                resultsTableBody.innerHTML = rowsHtml;
+                exportButton.disabled = false;
+            }
+
+            // --- Logica Modulo 8 ---
+            function renderFormM8() {
+                const moduleConf = moduleDefinitions['Modulo 8'];
+                moduleConf.fields.forEach(field => {
+                    const fieldWrapper = document.createElement('div');
+                     if(field.type === 'info-box'){
+                         fieldWrapper.className = 'p-4 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 text-sm rounded-r-lg leading-relaxed';
+                         fieldWrapper.innerHTML = field.content;
+                     } else {
+                         fieldWrapper.innerHTML = `<label for="${field.id}" class="block text-sm font-medium text-gray-700 mb-2">${field.label}</label>
+                                <input type="${field.type || 'text'}" id="${field.id}" name="${field.name}" ${field.required ? 'required' : ''} 
+                                       placeholder="${field.placeholder || ''}" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">`;
+                     }
+                    qualityCheckForm.appendChild(fieldWrapper);
+                });
+                renderAccordionM8();
+
+                // FIX: Add submit button for Module 8 form
+                const submitButtonDiv = document.createElement('div');
+                submitButtonDiv.className = 'mt-8';
+                submitButtonDiv.innerHTML = `<button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md main-button">Aggiungi Rilevazione Capolinea</button>`;
+                qualityCheckForm.appendChild(submitButtonDiv);
+
+                // Add listeners for session info
+                document.querySelector('[name="nomeRilevatore"]').addEventListener('input', e => { sessionRilevatoreM8.textContent = e.target.value || 'Nessuno'; });
+                document.querySelector('[name="capolinea"]').addEventListener('input', e => { sessionCapolineaM8.textContent = e.target.value || 'Nessuno'; });
+                document.querySelector('[name="addettoCapolinea"]').addEventListener('input', e => { sessionAddettoM8.textContent = e.target.value || 'Nessuno'; });
+                document.querySelector('[name="linee"]').addEventListener('input', e => { sessionLineeM8.textContent = e.target.value || 'Nessuna'; });
+                document.querySelector('[name="dataOraPulizia"]').addEventListener('input', e => { sessionPuliziaM8.textContent = e.target.value || 'N/D'; });
+            }
+
+            function renderAccordionM8() {
+                const m8Sections = moduleDefinitions["Modulo 8"].accordionFields;
+                
+                let accordionHtml = '';
+                for (const sectionTitle in m8Sections) {
+                    accordionHtml += `
+                        <div class="accordion-item space-y-4">
+                            <div class="accordion-header">
+                                <span>${sectionTitle}</span>
+                                <span class="accordion-icon"></span>
+                            </div>
+                            <div class="accordion-content">
+                                ${m8Sections[sectionTitle].map(field => {
+                                    if (field.type === 'text') {
+                                         return `<div class="form-row"><label for="${field.name}">${field.label}</label><input type="text" id="${field.name}" name="${field.name}" class="col-span-2 p-1 border rounded-md"></div>`;
+                                    }
+                                    return `
+                                        <div class="form-row">
+                                            <label for="${field.name}">${field.label}</label>
+                                            <div class="custom-radio-group custom-radio yes-no">
+                                                <input type="radio" id="${field.name}-si" name="${field.name}" value="SI">
+                                                <label for="${field.name}-si">SI</label>
+                                                <input type="radio" id="${field.name}-no" name="${field.name}" value="NO">
+                                                <label for="${field.name}-no">NO</label>
+                                            </div>
+                                            <input type="text" name="${field.name}_note" placeholder="note" class="p-1 border rounded-md">
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+                const accordionContainer = document.createElement('div');
+                accordionContainer.id = "module8-accordion";
+                accordionContainer.innerHTML = accordionHtml;
+                qualityCheckForm.appendChild(accordionContainer);
+
+                document.querySelectorAll('.accordion-header').forEach(header => {
+                    header.addEventListener('click', () => {
+                        header.classList.toggle('active');
+                        const content = header.nextElementSibling;
+                        content.classList.toggle('open');
+                    });
+                });
+            }
+            
+            // --- Logica Modulo 9 ---
+             function renderFormM9() {
+                 const commonInputClasses = "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition";
+                 const metroAStazioni = Object.keys(dotazioniStazioniMetroA);
+                
+                 qualityCheckForm.innerHTML = `
+                      <div>
+                         <label for="nome-rilevatore" class="block text-sm font-medium text-gray-700 mb-2">Nome Rilevatore</label>
+                         <input type="text" id="nome-rilevatore" name="nomeRilevatore" required placeholder="Es. Mario Rossi" class="${commonInputClasses}">
+                      </div>
+                      <div>
+                         <label for="metro-line" class="block text-sm font-medium text-gray-700 mb-2">Linea Metro</label>
+                         <select id="metro-line" name="metro" required class="${commonInputClasses}">
+                             <option value="" disabled selected>Seleziona una linea</option>
+                             <option value="Metro A">Metro A</option>
+                             <option value="Metro B">Metro B</option>
+                             <option value="Metro B1">Metro B1</option>
+                             <option value="Metro C">Metro C</option>
+                         </select>
+                      </div>
+                       <div id="stazione-select-container" class="hidden">
+                         <label for="stazione" class="block text-sm font-medium text-gray-700 mb-2">Stazione</label>
+                         <select id="stazione" name="stazione" required class="${commonInputClasses}">
+                              <option value="" disabled selected>Seleziona una stazione</option>
+                              ${metroAStazioni.map(s => `<option value="${s}">${s}</option>`).join('')}
+                         </select>
+                      </div>
+                      <div id="module9-container" class="space-y-6"></div>
+                    `;
+                
+                 document.getElementById('metro-line').addEventListener('change', handleMetroChangeM9);
+                 document.getElementById('stazione').addEventListener('change', handleStazioneChangeM9);
+                 document.getElementById('nome-rilevatore').addEventListener('input', e => { sessionRilevatoreM9.textContent = e.target.value || 'Nessuno'; });
+             }
+
+            function handleMetroChangeM9(event) {
+                const selectedMetro = event.target.value;
+                const stazioneContainer = document.getElementById('stazione-select-container');
+                sessionMetroM9.textContent = selectedMetro || 'Nessuna';
+                
+                document.getElementById('module9-container').innerHTML = '';
+                exportButton.disabled = true;
+
+                if (selectedMetro === 'Metro A') {
+                    stazioneContainer.classList.remove('hidden');
+                } else {
+                    stazioneContainer.classList.add('hidden');
+                    showAlert('Info', `Modulo per ${selectedMetro} in costruzione.`);
+                }
+            }
+
+             function handleStazioneChangeM9(event) {
+                 const selectedStazione = event.target.value;
+                 sessionStazioneM9.textContent = selectedStazione || 'Nessuna';
+                 renderDotazioniTableM9(selectedStazione);
+                 renderAmmaloramentiTableM9();
+             }
+            
+            function renderDotazioniTableM9(stazione) {
+                const container = document.getElementById('module9-container');
+                container.innerHTML = '';
+                
+                const dotazioniStazione = dotazioniStazioniMetroA[stazione];
+                if (!dotazioniStazione) {
+                    container.innerHTML = `<p class="text-center text-gray-500 py-4">Dati per la stazione ${stazione} non ancora disponibili.</p>`;
+                    exportButton.disabled = true;
+                    return;
+                }
+
+                const sections = {
+                    "ATRIO": [ { rif: "A1", voce: "Insegna METRO (M)" }, { rif: "A2", voce: "Rastrelliere Biciclette" }, { rif: "A3", voce: "Display Variabili" }, { rif: "A4", voce: "Pannelli Luminosi" }, { rif: "A5", voce: "Condizioni di Trasporto" }, { rif: "A6", voce: "Mappe Informative" }, { rif: "A7", voce: "Ascensori" }, { rif: "A8", voce: "Scale Mobili" }, { rif: "A9", voce: "Tappeti Mobili" }, { rif: "A10", voce: "Montascale" }, { rif: "A11", voce: "Lampade" }, { rif: "A12", voce: "OBT CSC / Tornelli" }, { rif: "A13", voce: "Tornelli in Uscita" }, { rif: "A14", voce: "Bagni Utenza" }, { rif: "A15", voce: "Bagni Personale" }, { rif: "A16", voce: "Manichette Antincendio" }, { rif: "A17", voce: "Estintori" }, { rif: "A18", voce: "Uscite di Sicurezza" }, { rif: "A19", voce: "Indicazioni Uscite Sicur." }, { rif: "A20", voce: "Piani Evacuazione" }, { rif: "A21", voce: "MET" }, { rif: "A22", voce: "MET" }, { rif: "A23", voce: "MET" }, { rif: "A24", voce: "MEB" }, { rif: "A25", voce: "MEB" }, { rif: "A26", voce: "MEB" }, { rif: "A27", voce: "MEB" }, { rif: "A28", voce: "MEB" } ],
+                    "BANCHINA PARI": [ { rif: "Bp1", voce: "Display Variabili" }, { rif: "Bp2", voce: "Pannelli Luminosi" }, { rif: "Bp3", voce: "Diffusione Sonora" }, { rif: "Bp4", voce: "Condizioni di Trasporto" }, { rif: "Bp5", voce: "Lampade" }, { rif: "Bp6", voce: "Mappe Informative" }, { rif: "Bp7", voce: "Manichette Antincendio" }, { rif: "Bp8", voce: "Estintori" }, { rif: "Bp9", voce: "Uscite di Sicurezza" }, { rif: "Bp10", voce: "Indicazioni Uscite Sicur." }, { rif: "Bp11", voce: "Piani Evacuazione" } ],
+                    "BANCHINA DISPARI": [ { rif: "Bd1", voce: "Display Variabili" }, { rif: "Bd2", voce: "Pannelli Luminosi" }, { rif: "Bd3", voce: "Diffusione Sonora" }, { rif: "Bd4", voce: "Condizioni di Trasporto" }, { rif: "Bd5", voce: "Lampade" }, { rif: "Bd6", voce: "Mappe Informative" }, { rif: "Bd7", voce: "Manichette Antincendio" }, { rif: "Bd8", voce: "Estintori" }, { rif: "Bd9", voce: "Uscite di Sicurezza" }, { rif: "Bd10", voce: "Indicazioni Uscite Sicur." }, { rif: "Bd11", voce: "Piani Evacuazione" } ]
+                };
+                
+                let tableHtml = `<h3 class="text-xl font-semibold mt-6 mb-4">Dotazioni Stazione</h3><div id="module9-dotazioni-table" class="overflow-x-auto bg-white rounded-lg shadow"><table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50"><tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sezione</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rif.</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Voce</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Dotazione</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Guasto</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Note</th>
+                    </tr></thead><tbody class="bg-white divide-y divide-gray-200">`;
+
+                for (const sectionName in sections) {
+                    tableHtml += `<tr><td colspan="6" class="px-6 py-2 bg-gray-100 font-bold">${sectionName}</td></tr>`;
+                    sections[sectionName].forEach(item => {
+                        const dotazioneValue = dotazioniStazione[item.rif] !== undefined ? dotazioniStazione[item.rif] : (dotazioniStazione[item.rif.toLowerCase()] !== undefined ? dotazioniStazione[item.rif.toLowerCase()] : '');
+                        tableHtml += `
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${sectionName}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${item.rif}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${item.voce}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-center">${dotazioneValue}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-center"><input type="checkbox" name="guasto_${item.rif}" value="SI"></td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm"><input type="text" name="note_${item.rif}" class="w-full p-1 border rounded-md"></td>
+                            </tr>
+                        `;
+                    });
+                }
+                 tableHtml += '</tbody></table></div>';
+                container.innerHTML = tableHtml;
+                 exportButton.disabled = false;
+            }
+
+            function renderAmmaloramentiTableM9() {
+                 const container = document.getElementById('module9-container');
+                 const infoBox = `<div class="p-4 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 text-sm rounded-r-lg leading-relaxed mt-8">Quando si controllano i bagni chimici, non si devono prendere in considerazione le seguenti voci: illuminazione interna, funzionamento areatore, acqua calda, presenza asciugamani elettrico o salviettine, presenza sapone, presenza cestino (solo nel bagno uomini).</div>`;
+                 const tableTitle = `<h3 class="text-xl font-semibold mt-8 mb-4">Ammaloramenti e Pulizie Stazioni Metropolitane</h3>`;
+                
+                 const sections = {
+                      'ATRIO': { 'Stato Pavimentazione': [ { label: 'Presenza Buche', name: 'atrio_pav_buche', type: 'yes-no' }, { label: 'Presenza Avvallamenti', name: 'atrio_pav_avvallamenti', type: 'yes-no' }, { label: 'Pavimentazione Divelta', name: 'atrio_pav_divelta', type: 'yes-no' }, { label: 'Pulizia Pavimento', name: 'atrio_pav_pulizia', type: 'rating' } ], 'Stato Pareti': [ { label: 'Infiltrazioni', name: 'atrio_pareti_infiltrazioni', type: 'yes-no' }, { label: 'Crepe/Fori', name: 'atrio_pareti_crepe', type: 'yes-no' }, { label: 'Pulizia Pareti', name: 'atrio_pareti_pulizia', type: 'rating' } ], 'Stato Soffitti': [ { label: 'Ammaloramento', name: 'atrio_soffitti_ammaloramento', type: 'yes-no' }, { label: 'Infiltrazioni/Crepe', name: 'atrio_soffitti_crepe', type: 'yes-no' }, { label: 'Pulizia Soffitti', name: 'atrio_soffitti_pulizia', type: 'rating' } ]},
+                      'BANCHINA PARI': { 'Stato Pavimentazione': [ { label: 'Presenza Buche', name: 'bp_pav_buche', type: 'yes-no' }, { label: 'Presenza Avvallamenti', name: 'bp_pav_avvallamenti', type: 'yes-no' }, { label: 'Pavimentazione Divelta', name: 'bp_pav_divelta', type: 'yes-no' }, { label: 'Pulizia Pavimento', name: 'bp_pav_pulizia', type: 'rating' } ], 'Stato Pareti': [ { label: 'Infiltrazioni', name: 'bp_pareti_infiltrazioni', type: 'yes-no' }, { label: 'Crepe/Fori', name: 'bp_pareti_crepe', type: 'yes-no' }, { label: 'Pulizia Pareti', name: 'bp_pareti_pulizia', type: 'rating' } ], 'Stato Soffitti': [ { label: 'Ammaloramento', name: 'bp_soffitti_ammaloramento', type: 'yes-no' }, { label: 'Infiltrazioni/Crepe', name: 'bp_soffitti_crepe', type: 'yes-no' }, { label: 'Pulizia Soffitti', name: 'bp_soffitti_pulizia', type: 'rating' } ]},
+                      'BANCHINA DISPARI': { 'Stato Pavimentazione': [ { label: 'Presenza Buche', name: 'bd_pav_buche', type: 'yes-no' }, { label: 'Presenza Avvallamenti', name: 'bd_pav_avvallamenti', type: 'yes-no' }, { label: 'Pavimentazione Divelta', name: 'bd_pav_divelta', type: 'yes-no' }, { label: 'Pulizia Pavimento', name: 'bd_pav_pulizia', type: 'rating' } ], 'Stato Pareti': [ { label: 'Infiltrazioni', name: 'bd_pareti_infiltrazioni', type: 'yes-no' }, { label: 'Crepe/Fori', name: 'bd_pareti_crepe', type: 'yes-no' }, { label: 'Pulizia Pareti', name: 'bd_pareti_pulizia', type: 'rating' } ], 'Stato Soffitti': [ { label: 'Ammaloramento', name: 'bd_soffitti_ammaloramento', type: 'yes-no' }, { label: 'Infiltrazioni/Crepe', name: 'bd_soffitti_crepe', type: 'yes-no' }, { label: 'Pulizia Soffitti', name: 'bd_soffitti_pulizia', type: 'rating' } ]}
+                 };
+
+                let accordionHtml = infoBox + tableTitle + `<div id="ammaloramenti-accordion">
+                      <div>
+                         <label for="nome-rilevatore-ammaloramenti" class="block text-sm font-medium text-gray-700 mb-2">Nome Rilevatore (Ammaloramenti)</label>
+                         <input type="text" id="nome-rilevatore-ammaloramenti" name="nomeRilevatoreAmmaloramenti" required placeholder="Es. Mario Rossi" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                      </div>
+                  `;
+                for(const sectionName in sections) {
+                    accordionHtml += `<div class="accordion-item space-y-4 mt-4">
+                            <div class="accordion-header">
+                                <span>${sectionName.toUpperCase()}</span>
+                                <span class="accordion-icon"></span>
+                            </div>
+                            <div class="accordion-content">`;
+                     for(const subSectionName in sections[sectionName]) {
+                         accordionHtml += `<h4 class="font-semibold col-span-full">${subSectionName}</h4>`;
+                         sections[sectionName][subSectionName].forEach(field => {
+                             accordionHtml += `<div class="form-row"><label for="${field.name}">${field.label}</label>`;
+                             if(field.type === 'yes-no') {
+                                  accordionHtml += `<div class="custom-radio-group custom-radio yes-no">
+                                                      <input type="radio" id="${field.name}-si" name="${field.name}" value="SI"><label for="${field.name}-si">SI</label>
+                                                      <input type="radio" id="${field.name}-no" name="${field.name}" value="NO"><label for="${field.name}-no">NO</label>
+                                                  </div>`;
+                             } else if (field.type === 'rating') {
+                                accordionHtml += `<div class="custom-radio-group custom-radio rating-group">
+                                    ${[1,2,3,4].map(n => `<input type="radio" id="${field.name}-${n}" name="${field.name}" value="${n}"><label for="${field.name}-${n}" class="border rounded-md flex items-center justify-center">${n}</label>`).join('')}
+                                </div>`;
+                             }
+                             accordionHtml += `<input type="text" name="${field.name}_note" placeholder="note" class="p-1 border rounded-md"></div>`;
+                         });
+                     }
+                    accordionHtml += `</div></div>`;
+                }
+                accordionHtml += '</div>';
+
+                const newDiv = document.createElement('div');
+                newDiv.id = "module9-ammaloramenti-table";
+                newDiv.innerHTML = accordionHtml;
+                container.appendChild(newDiv);
+
+                 document.querySelectorAll('#ammaloramenti-accordion .accordion-header').forEach(header => {
+                       header.addEventListener('click', () => {
+                           header.classList.toggle('active');
+                           const content = header.nextElementSibling;
+                           content.classList.toggle('open');
+                       });
+                   });
+            }
+
+
+            // --- Esportazione Excel ---
+            function exportToExcel() {
+                if (!['Modulo 7', 'Modulo 8', 'Modulo 9'].includes(selectedModule) && qualityChecks.length === 0) { 
+                    showAlert("Esportazione non possibile", "Non ci sono dati da esportare."); 
+                    return;
+                }
+                if (selectedModule === 'Modulo 8' && qualityChecks.length === 0) {
+                     showAlert("Esportazione non possibile", "Aggiungere almeno una rilevazione per il capolinea.");
+                     return;
+                }
+
+
+                const moduleConf = moduleDefinitions[selectedModule] || moduleDefinitions["Default"];
+                const today = new Date().toISOString().slice(0, 10);
+                let fileName = `Controllo_Qualita_${moduleConf.display_name.replace(/[^a-zA-Z0-9]/g,'_')}_${today}.xlsx`;
+                const workbook = XLSX.utils.book_new();
+                
+                const rilevatore = document.querySelector('[name="nomeRilevatore"]')?.value || (qualityChecks.length > 0 ? qualityChecks[0]?.nomeRilevatore : '');
+                if (!rilevatore && selectedModule !== 'Modulo 8' && selectedModule !== 'Modulo 9') { showAlert("Errore", "Nome Rilevatore non inserito. Impossibile esportare."); return; }
+                const checkDate = new Date().toLocaleDateString("it-IT");
+
+                const setSheetCols = (ws) => {
+                    const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+                    if (data && data.length > 0 && data[0] && data[0].length > 0) {
+                        const cols = Object.keys(data[0]).map(key => ({
+                            wch: data.reduce((max, row) => Math.max(max, (row[key] ? String(row[key]).length : 0)), 0) + 2
+                        }));
+                        ws['!cols'] = cols;
+                    }
+                };
+
+                if (selectedModule === 'Modulo 7') {
+                    const linea = document.getElementById('linea').value;
+                    if (!linea) { showAlert("Errore", "Seleziona una linea prima di esportare."); return; }
+
+                    const sessionData = [['Nome Rilevatore:', rilevatore], ['Data Controllo:', checkDate], ['Linea:', linea]];
+                    const headers = ["Impianto", "Condizioni Box", "Pensilina", "Mappe e cond. trasp.", "N° Pali", "Stato Palo", "N° Etic. Braille", "Tabella", "Info Leggibili", "Stato Doghe", "Lunette e Denom.", "N° Imp. Visibile", "Tav. Informativa"];
+                    
+                    const dataRows = [];
+                    const tableRows = document.querySelectorAll('#results-table tbody tr');
+                    const impiantiList = linea === '06 A' ? impianti06A : impianti06R;
+                    tableRows.forEach((row, index) => {
+                        const rowData = [
+                            impiantiList[index],
+                            row.querySelector(`[name="condizioniBox_${index}"]`).value,
+                            row.querySelector(`[name="pensilina_${index}"]`).value,
+                            row.querySelector(`[name="mappe_${index}"]`).value,
+                            row.querySelector(`[name="numPali_${index}"]`).value,
+                            row.querySelector(`[name="statoPalo_${index}"]`).value,
+                            row.querySelector(`[name="numBraille_${index}"]`).value,
+                            row.querySelector(`[name="tabella_${index}"]`).value,
+                            row.querySelector(`[name="infoLeggibili_${index}"]`).value,
+                            row.querySelector(`[name="statoDoghe_${index}"]`).value,
+                            row.querySelector(`[name="lunette_${index}"]`).value,
+                            row.querySelector(`[name="numImpiantoVisibile_${index}"]`).value,
+                            row.querySelector(`[name="tavolettaInformativa_${index}"]`).value
+                        ];
+                        dataRows.push(rowData);
+                    });
+                    
+                    const ws = XLSX.utils.aoa_to_sheet([ ...sessionData, [], headers, ...dataRows ]);
+                    setSheetCols(ws);
+                    XLSX.utils.book_append_sheet(workbook, ws, "Dotazioni");
+                } else if (selectedModule === 'Modulo 9') {
+                    const metro = document.getElementById('metro-line').value;
+                    const stazione = document.getElementById('stazione').value;
+                    const rilevatoreAmmaloramenti = document.getElementById('nome-rilevatore-ammaloramenti').value;
+                    if (!metro || !stazione) { showAlert("Errore", "Seleziona Metro e Stazione prima di esportare."); return; }
+                     fileName = `Controllo_Qualita_${metro.replace(' ','_')}_${stazione.replace(/[^a-zA-Z0-9]/g,'_')}_${today}.xlsx`;
+
+                    // Foglio 1: Dotazioni
+                    const sessionDataDotazioni = [['Nome Rilevatore:', rilevatore], ['Data Controllo:', checkDate], ['Metro:', metro], ['Stazione:', stazione]];
+                    const headersDotazioni = ["Sezione", "Rif.", "Voce", "Dotazione", "Guasto", "Note"];
+                    const dataRowsDotazioni = [];
+                      const tableRowsDotazioni = document.querySelectorAll('#module9-dotazioni-table tbody tr');
+                       tableRowsDotazioni.forEach(row => {
+                           if(row.children.length > 1) { 
+                               const rowData = Array.from(row.children).map((cell, i) => {
+                                   if (cell.querySelector('input[type="checkbox"]')) {
+                                       return cell.querySelector('input').checked ? "SI" : "";
+                                   }
+                                   if (cell.querySelector('input[type="text"]')) {
+                                       return cell.querySelector('input').value;
+                                   }
+                                   return cell.textContent;
+                               });
+                               dataRowsDotazioni.push(rowData);
+                           }
+                    });
+                    const ws1 = XLSX.utils.aoa_to_sheet([ ...sessionDataDotazioni, [], headersDotazioni, ...dataRowsDotazioni ]);
+                    setSheetCols(ws1);
+                    XLSX.utils.book_append_sheet(workbook, ws1, "Dotazioni");
+                    
+                    // Foglio 2: Ammaloramenti
+                    const dataOraPuliziaM9 = document.querySelector('[name="dataOraPulizia"]')?.value || '';
+                    const sessionDataAmmaloramenti = [['Nome Rilevatore:', rilevatoreAmmaloramenti || rilevatore], ['Data Controllo:', checkDate], ['Metro:', metro], ['Stazione:', stazione], ['Data/Ora Pulizia:', dataOraPuliziaM9]];
+                    const headersAmmaloramenti = ["Sezione", "Sottosezione", "Voce", "Risposta", "Note"];
+                    const dataRowsAmmaloramenti = [];
+                    const form = new FormData(qualityCheckForm);
+                    
+                    const ammaloramentiSections = {
+                         'ATRIO': { 'Stato Pavimentazione': [ { label: 'Presenza Buche', name: 'atrio_pav_buche'}, { label: 'Presenza Avvallamenti', name: 'atrio_pav_avvallamenti'}, { label: 'Pavimentazione Divelta', name: 'atrio_pav_divelta'}, { label: 'Pulizia Pavimento', name: 'atrio_pav_pulizia'} ], 'Stato Pareti': [ { label: 'Infiltrazioni', name: 'atrio_pareti_infiltrazioni'}, { label: 'Crepe/Fori', name: 'atrio_pareti_crepe'}, { label: 'Pulizia Pareti', name: 'atrio_pareti_pulizia'} ], 'Stato Soffitti': [ { label: 'Ammaloramento', name: 'atrio_soffitti_ammaloramento'}, { label: 'Infiltrazioni/Crepe', name: 'atrio_soffitti_crepe'}, { label: 'Pulizia Soffitti', name: 'atrio_soffitti_pulizia'} ]},
+                         'BANCHINA PARI': { 'Stato Pavimentazione': [ { label: 'Presenza Buche', name: 'bp_pav_buche'}, { label: 'Presenza Avvallamenti', name: 'bp_pav_avvallamenti'}, { label: 'Pavimentazione Divelta', name: 'bp_pav_divelta'}, { label: 'Pulizia Pavimento', name: 'bp_pav_pulizia'} ], 'Stato Pareti': [ { label: 'Infiltrazioni', name: 'bp_pareti_infiltrazioni'}, { label: 'Crepe/Fori', name: 'bp_pareti_crepe'}, { label: 'Pulizia Pareti', name: 'bp_pareti_pulizia'} ], 'Stato Soffitti': [ { label: 'Ammaloramento', name: 'bp_soffitti_ammaloramento'}, { label: 'Infiltrazioni/Crepe', name: 'bp_soffitti_crepe'}, { label: 'Pulizia Soffitti', name: 'bp_soffitti_pulizia'} ]},
+                         'BANCHINA DISPARI': { 'Stato Pavimentazione': [ { label: 'Presenza Buche', name: 'bd_pav_buche'}, { label: 'Presenza Avvallamenti', name: 'bd_pav_avvallamenti'}, { label: 'Pavimentazione Divelta', name: 'bd_pav_divelta'}, { label: 'Pulizia Pavimento', name: 'bd_pav_pulizia'} ], 'Stato Pareti': [ { label: 'Infiltrazioni', name: 'bd_pareti_infiltrazioni'}, { label: 'Crepe/Fori', name: 'bd_pareti_crepe'}, { label: 'Pulizia Pareti', name: 'bd_pareti_pulizia'} ], 'Stato Soffitti': [ { label: 'Ammaloramento', name: 'bd_soffitti_ammaloramento'}, { label: 'Infiltrazioni/Crepe', name: 'bd_soffitti_crepe'}, { label: 'Pulizia Soffitti', name: 'bd_soffitti_pulizia'} ]}
+                    };
+
+                    for(const section in ammaloramentiSections) {
+                        for(const subSection in ammaloramentiSections[section]) {
+                            ammaloramentiSections[section][subSection].forEach(field => {
+                                const value = form.get(field.name) || '';
+                                const note = form.get(`${field.name}_note`) || '';
+                                dataRowsAmmaloramenti.push([section.toUpperCase(), subSection, field.label, value, note]);
+                            });
+                        }
+                    }
+
+                    const ws2 = XLSX.utils.aoa_to_sheet([ ...sessionDataAmmaloramenti, [], headersAmmaloramenti, ...dataRowsAmmaloramenti ]);
+                    setSheetCols(ws2);
+                    XLSX.utils.book_append_sheet(workbook, ws2, "Ammaloramenti");
+                }
+                else {
+                     const headers = Object.keys(moduleConf.exportHeaders);
+                     const dataRows = qualityChecks.map(check => 
+                         headers.map(header => {
+                             const key = moduleConf.exportHeaders[header];
+                             if(selectedModule === 'Modulo 1' && key.startsWith('indLinea')) return check[key] ? 'Non funzionante' : 'Funzionante';
+                             if (selectedModule === 'Modulo 4' && key === 'pedanaFunzionante' && check.conPedana === 'NO') return '';
+                             return check[key] == null ? '' : check[key];
+                         })
+                    ).reverse();
+
+                    let sessionData = [];
+                    if (['Modulo 1', 'Modulo 3', 'Modulo 6'].includes(selectedModule)) {
+                        const establishment = qualityChecks[0]?.stabilimento;
+                        if (!establishment) { showAlert("Errore", "Stabilimento non selezionato. Impossibile esportare."); return; }
+                        sessionData = [['Nome Rilevatore:', rilevatore], ['Data Controllo:', checkDate], ['Stabilimento:', establishment]];
+                        if(selectedModule === 'Modulo 6') {
+                            const ade = qualityChecks[0]?.adeServizio;
+                            const vettureServizio = qualityChecks[0]?.vettureServizio;
+                            const ctTrazione = qualityChecks[0]?.ctTrazione;
+                            const parcoVetture = qualityChecks[0]?.parcoVetture;
+                            if(!ade || !vettureServizio || !ctTrazione || !parcoVetture) {
+                                showAlert("Errore", "Compilare tutti i campi informativi dello stabilimento prima di esportare.");
+                                return;
+                            }
+                            sessionData.push(
+                                ['A.D.E. in Servizio (Nome e cognome):', ade],
+                                ['Vetture messe in servizio:', vettureServizio],
+                                ['C.T. Trazione:', ctTrazione],
+                                ['Totale parco vetture dello stabilimento:', parcoVetture]
+                            );
+                        }
+                    } else if (selectedModule === 'Modulo 2') { 
+                        const location = qualityChecks[0]?.rimessaCapolinea;
+                        if (!location) { showAlert("Errore", "Rimessa/Capolinea non inserita. Impossibile esportare."); return; }
+                        sessionData = [['Nome Rilevatore:', rilevatore], ['Data:', checkDate], ['Ora:', qualityChecks[0]?.timestamp_time], ['Rimessa/Capolinea:', location]];
+                    } else if (selectedModule === 'Modulo 4') {
+                        const linea = document.querySelector('#linea')?.value || '';
+                        sessionData = [['Nome Rilevatore:', rilevatore], ['Data Controllo:', checkDate], ['Numero Linea:', linea]];
+                    } else if (selectedModule === 'Modulo 5') {
+                        const linea = qualityChecks[0]?.lineaMetro;
+                        if (!linea) { showAlert("Errore", "Linea Metro/F.R. non inserita. Impossibile esportare."); return; }
+                        sessionData = [['Nome Rilevatore:', rilevatore], ['Data Controllo:', checkDate], ['Linea Metro/F.R.:', linea]];
+                    } else if (selectedModule === 'Modulo 8') {
+                        const check = qualityChecks[0];
+                        sessionData = [
+                             ['Nome Rilevatore:', check.nomeRilevatore || ''], 
+                             ['Data Controllo:', check.timestamp_date], 
+                             ['Orario Verifica:', check.orarioVerifica],
+                             ['Capolinea:', check.capolinea],
+                             ['Addetto Capolinea:', check.addettoCapolinea],
+                             ['Linee:', check.linee],
+                             ['Data/Ora Pulizia:', check.dataOraPulizia || '']
+                        ];
+
+                        const headersM8 = [];
+                        const dataRowsM8 = qualityChecks.map(check => {
+                            const exportRow = [];
+                             for (const section in moduleConf.accordionFields) {
+                                 moduleConf.accordionFields[section].forEach(field => {
+                                     if(headersM8.length < Object.values(moduleConf.accordionFields).flat().length * 2) {
+                                          headersM8.push(field.label);
+                                          if(field.type !== 'text') headersM8.push(`Note ${field.label}`);
+                                     }
+                                     exportRow.push(check[field.name] || '');
+                                     if(field.type !== 'text') {
+                                        exportRow.push(check[`${field.name}_note`] || '');
+                                     }
+                                 });
+                             }
+                            return exportRow;
+                        });
+                        
+                        let finalDataForSheet = [ ...sessionData, [], headersM8, ...dataRowsM8 ];
+                        const ws = XLSX.utils.aoa_to_sheet(finalDataForSheet);
+                         setSheetCols(ws);
+                        XLSX.utils.book_append_sheet(workbook, ws, moduleConf.display_name.substring(0, 31));
+
+                    }
+                    
+                    if (selectedModule !== 'Modulo 8') {
+                        let finalDataForSheet = [ ...sessionData, [], headers, ...dataRows ];
+
+                        if (selectedModule === 'Modulo 6') {
+                            const numVetture = qualityChecks.length;
+                            const ratedCategories = { "Pulizia Esterna": "puliziaEsterna", "Pulizia Interna": "puliziaInterna", "Luci": "luci", "Stato Sedili": "statoSedili" };
+                            const summaryRows = [];
+                            let totalRatioSum = 0;
+
+                            summaryRows.push(['', '', '', '', '']); // Header for summary
+                            summaryRows.push(['Categoria', 'Vetture Totali', 'Punteggio Massimo', 'Punteggio Reale', 'Ratio %']);
+
+                            for (const [label, key] of Object.entries(ratedCategories)) {
+                                const punteggioReale = qualityChecks.reduce((sum, check) => sum + (Number(check[key]) || 0), 0);
+                                const punteggioMassimo = numVetture * 4;
+                                const ratio = punteggioMassimo > 0 ? (punteggioReale / punteggioMassimo) : 0;
+                                totalRatioSum += ratio;
+                                summaryRows.push([label, numVetture, punteggioMassimo, punteggioReale, { t:'n', v:ratio, z:'0.00%'}]);
+                            }
+
+                            const overallQuality = (totalRatioSum / Object.keys(ratedCategories).length);
+                            summaryRows.push([]); // blank row
+                            summaryRows.push(['', '', '', '% Qualità', { t:'n', v:overallQuality, z:'0.00%'}]);
+
+                            finalDataForSheet.push([], [], ...summaryRows);
+                        }
+                        const ws = XLSX.utils.aoa_to_sheet(finalDataForSheet);
+                        setSheetCols(ws);
+                        XLSX.utils.book_append_sheet(workbook, ws, moduleConf.display_name.substring(0, 31));
+                    }
+                }
+                
+                if (workbook.SheetNames.length > 0) {
+                    XLSX.writeFile(workbook, fileName);
+                    showAlert("Successo!", `Dati esportati correttamente nel file ${fileName}.`);
+                }
+                
+                if (selectedModule === 'Modulo 7') {
+                     handleLineaChangeM7({ target: { value: document.getElementById('linea').value } });
+                } else if (selectedModule === 'Modulo 8' || selectedModule === 'Modulo 9'){
+                    qualityChecks = [];
+                    renderTable();
+                    if (selectedModule === 'Modulo 8') {
+                         orarioVerificaM8 = null; 
+                         sessionOrarioM8.textContent = 'N/D';
+                    }
+                    Array.from(qualityCheckForm.elements).forEach(element => {
+                         if (element.type !== 'submit' && !['nomeRilevatore', 'capolinea', 'addettoCapolinea', 'linee', 'dataOraPulizia', 'metro', 'stazione', 'nomeRilevatoreAmmaloramenti'].includes(element.name)) {
+                             if(element.type === 'radio' || element.type === 'checkbox') element.checked = false;
+                             else element.value = '';
+                         }
+                    });
+
+                } else {
+                    qualityChecks = [];
+                    renderTable();
+                }
+            }
+
+            initialize();
+        });
+    </script>
+</body>
+</html>
